@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED True
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y tzdata
-ENV TZ Asia/Tokyo
+# ENV TZ Asia/Tokyo
 
 RUN apt-get update && \
     apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3.10 && \
@@ -26,5 +26,8 @@ COPY . ./
 COPY magic-pdf.gpu.json /root/magic-pdf.json
 
 RUN python3.10 download_models.py
+
+RUN python3.10 download_models2.py
+
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "3000"]

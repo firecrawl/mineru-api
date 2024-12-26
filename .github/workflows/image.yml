@@ -28,5 +28,5 @@ jobs:
 
           - name: 'Build Inventory Image'
             run: |
-              docker build . --tag ghcr.io/mendableai/mineru-api:latest
+              docker build . --progress=plain --tag ghcr.io/mendableai/mineru-api:latest
               docker push ghcr.io/mendableai/mineru-api:latest
