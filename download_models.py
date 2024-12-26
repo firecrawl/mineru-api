@@ -13,3 +13,7 @@ model_dir = snapshot_download(
     local_dir="/root/PDF-Extract-Kit",
     allow_patterns=mineru_patterns,
 )
+
+layoutreader_model_dir = snapshot_download(
+    "ppaanngggg/layoutreader", local_dir="/root/layoutreader"
+)
