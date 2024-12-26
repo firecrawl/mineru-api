@@ -20,7 +20,9 @@ COPY pyproject.toml poetry.lock ./
 
 ENV PATH="/root/.local/bin:$PATH"
 RUN poetry config virtualenvs.create false && \
-    poetry install --no-interaction --no-root
+    poetry install --no-interaction --no-root && \
+    rm -rf /root/.cache/pypoetry && \
+    rm -rf /root/.cache/pip
 
 COPY . ./
 COPY magic-pdf.gpu.json /root/magic-pdf.json
