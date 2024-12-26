@@ -11,7 +11,7 @@ on:
 
 jobs:
       push-api:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-latest-m
         defaults:
           run:
             working-directory: './'
