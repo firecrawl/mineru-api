@@ -19,19 +19,8 @@ WORKDIR $APP_HOME
 COPY pyproject.toml poetry.lock ./
 
 ENV PATH="/root/.local/bin:$PATH"
-# Install core dependencies first
 RUN poetry config virtualenvs.create false && \
-    poetry install --no-interaction --no-root \
-    --only main && \
-    rm -rf /root/.cache/pypoetry
-
-# Install ML and other dependencies
-RUN poetry install --no-interaction --no-root --with ml && \
-    rm -rf /root/.cache/pypoetry
-RUN poetry install --no-interaction --no-root --with vision && \
-    rm -rf /root/.cache/pypoetry
-RUN poetry install --no-interaction --no-root --with docs && \
-    rm -rf /root/.cache/pypoetry
+    poetry install --no-interaction --no-root
 
 COPY . ./
 COPY magic-pdf.gpu.json /root/magic-pdf.json
