@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y tzdata
 # ENV TZ Asia/Tokyo
 
 RUN apt-get update && \
-    apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3.10 python3-pip \
+    apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3.10 python3-pip && \
     rm -rf /var/lib/apt/lists/*
 RUN curl -sSL https://install.python-poetry.org | POETRY_VERSION=${POETRY_VERSION} python3.10 -
 
@@ -25,7 +25,7 @@ RUN poetry config virtualenvs.create false && \
     rm -rf /root/.cache/pip
 
 #use paddlegpu
-RUN pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu124/
+RUN pip install paddlepaddle-gpu==3.0.0b1 -i python -m pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
 
 COPY . ./
 COPY magic-pdf.gpu.json /root/magic-pdf.json
