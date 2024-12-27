@@ -32,27 +32,3 @@ jobs:
               docker image ls ghcr.io/mendableai/mineru-api:latest
               docker history ghcr.io/mendableai/mineru-api:latest
               docker push ghcr.io/mendableai/mineru-api:latest
-
-      push-serverless:
-        runs-on: ubuntu-latest-m
-        defaults:
-          run:
-            working-directory: './'
-        steps:
-          - name: 'Checkout GitHub Action'
-            uses: actions/checkout@main
-
-          - name: 'Login to GitHub Container Registry'
-            uses: docker/login-action@v1
-            with:
-              registry: ghcr.io
-              username: ${{github.actor}}
-              password: ${{secrets.GITHUB_TOKEN}}
-
-          - name: 'Build Serverless Image'
-            run: |
-              docker build . -f Dockerfile.serverless --tag ghcr.io/mendableai/mineru-api-serverless:latest
-              docker image ls ghcr.io/mendableai/mineru-api-serverless:latest
-              docker history ghcr.io/mendableai/mineru-api-serverless:latest
-              docker push ghcr.io/mendableai/mineru-api-serverless:latest
-

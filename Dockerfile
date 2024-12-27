@@ -27,10 +27,16 @@ RUN poetry config virtualenvs.create false && \
 #use paddlegpu
 RUN pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
 
+#for runpod serverless
+RUN pip install runpod
+
+
 COPY . ./
 COPY magic-pdf.gpu.json /root/magic-pdf.json
 
 RUN python3.10 download_models.py
 
+#serverless
+# CMD ["sh", "-c", "ls && python3.10 serverless.py"]
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "3000"]
