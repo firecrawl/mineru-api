@@ -35,8 +35,21 @@ COPY . ./
 COPY magic-pdf.gpu.json /root/magic-pdf.json
 
 RUN python3.10 download_models.py
-
 #serverless
 # CMD ["sh", "-c", "ls && python3.10 serverless.py"]
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "3000"]
+# Download and set up models
+RUN mkdir -p models && \
+    # Download PP Detect Model
+    curl -L -o models/det_model.tar paddleocr.bj.bcebos.com/PP-OCRv4/chinese/ch_PP-OCRv4_det_infer.tar && \
+    tar -xvf models/det_model.tar -C models/ && \
+    rm models/det_model.tar && \
+    \
+    # Download PP Rec Model
+    curl -L -o models/rec_model.tar paddleocr.bj.bcebos.com/PP-OCRv4/chinese/ch_PP-OCRv4_rec_infer.tar && \
+    tar -xvf models/rec_model.tar -C models/ && \
+    rm models/rec_model.tar
+
+CMD ["python3.10", "-m", "app.serverless"]
+
+# CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "3000"]
