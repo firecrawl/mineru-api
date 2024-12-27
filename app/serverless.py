@@ -85,6 +85,6 @@ def handler(event):
         return {"error": str(e)}
 
 # Call setup to initiate and warm up resources
-setup()
+# setup()
 
 runpod.serverless.start({"handler": handler}) 
