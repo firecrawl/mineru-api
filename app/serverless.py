@@ -8,7 +8,7 @@ import runpod
 from magic_pdf.pipe.UNIPipe import UNIPipe
 from magic_pdf.rw.DiskReaderWriter import DiskReaderWriter
 
-from app.office_converter import OfficeConverter, OfficeExts
+from .office_converter import OfficeConverter, OfficeExts
 
 # Configure model settings
 model_config.__use_inside_model__ = True
