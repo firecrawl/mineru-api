@@ -25,7 +25,7 @@ RUN poetry config virtualenvs.create false && \
     rm -rf /root/.cache/pip
 
 #use paddlegpu
-RUN pip install paddlepaddle-gpu==3.0.0b1 -i python -m pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
+RUN pip install paddlepaddle-gpu==3.0.0b1-i https://www.paddlepaddle.org.cn/packages/stable/cu118/
 
 COPY . ./
 COPY magic-pdf.gpu.json /root/magic-pdf.json
