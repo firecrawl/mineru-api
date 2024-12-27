@@ -35,4 +35,4 @@ COPY magic-pdf.gpu.json /root/magic-pdf.json
 RUN python3.10 download_models.py
 
 
-CMD ["python3.10", "serverless.py"]
+CMD ["sh", "-c", "ls && python3.10 serverless.py"]
