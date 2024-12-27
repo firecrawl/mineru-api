@@ -1,6 +1,6 @@
 ARG POETRY_VERSION=1.6.1
 
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
+FROM nvidia/cuda:12.1.1-devel-ubuntu22.04
 # Allow statements and log messages to immediately appear in the logs
 ENV PYTHONUNBUFFERED True
 
@@ -25,7 +25,7 @@ RUN poetry config virtualenvs.create false && \
     rm -rf /root/.cache/pip
 
 #use paddlegpu
-RUN pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu123/
+RUN pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
 
 COPY . ./
 COPY magic-pdf.gpu.json /root/magic-pdf.json
