@@ -1,32 +1,9 @@
 # MinerU API Server
 
-API server for [MinerU](https://github.com/opendatalab/MinerU).
+Fork of [mineru-api](https://github.com/neka-nat/mineru-api/) - API server for [MinerU](https://github.com/opendatalab/MinerU).
 
-## Quick Start
+> **Note:** This project is a **Work In Progress (WIP)** and is designed for running MinerU on serverless platforms such as [Runpod](https://www.runpod.io/).
 
-```bash
-git clone https://github.com/neka-nat/mineru-api.git
-cd mineru-api
-docker compose up
-# GPU
-docker compose up -f docker-compose.gpu.yml
-```
+## How to run
 
-## Request parsing
-
-Use curl.
-
-```bash
-curl -X PUT http://localhost:3000/api/parse -F "file=@/path/to/file.pdf"
-```
-
-Or access `http://localhost:3000/docs` in your browser.
-
-### Demo movie (x16)
-![demo16](demo16.gif)
-
-## ToDo
-
-- [ ] Download images
-- [x] Use GPU
-- [ ] Utility for deploying to public cloud
+WIP
