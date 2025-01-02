@@ -60,6 +60,28 @@ def setup():
     # Warm up the conversion process
     convert_to_markdown(sample_pdf_bytes, sample_dir, filename)
 
+
+    # def get_model(
+    #     self,
+    #     ocr: bool,
+    #     show_log: bool,
+    #     lang=None,
+    #     layout_model=None,
+    #     formula_enable=None,
+    #     table_enable=None,
+    # ):
+    #layout_model: doclayout_yolo, apply_formula: True, apply_ocr: True, apply_table: False, table_model: rapid_table, lang: None
+def init_model():
+    from magic_pdf.model.doc_analyze_by_custom_model import ModelSingleton
+    model_manager = ModelSingleton()
+    print("About to init model")
+    txt_model = model_manager.get_model(False, False)  # noqa: F841
+    print('txt_model init final')
+    ocr_model = model_manager.get_model(True, False)  # noqa: F841
+    print('ocr_model init final')
+    return 0
+
+
 def handler(event):
     try:
         # Extract base64 encoded file and filename from the event
@@ -86,5 +108,7 @@ def handler(event):
 
 # Call setup to initiate and warm up resources
 # setup()
+
+init_model()
 
 runpod.serverless.start({"handler": handler}) 
