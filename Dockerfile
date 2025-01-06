@@ -38,6 +38,7 @@ RUN python3.10 download_models.py
 #serverless
 # CMD ["sh", "-c", "ls && python3.10 serverless.py"]
 
+#download paddleocr model
 RUN sh download_model.sh
 
 CMD ["python3.10", "-m", "app.serverless"]
