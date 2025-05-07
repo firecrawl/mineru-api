@@ -3,11 +3,13 @@ import os
 from pathlib import Path
 from uuid import uuid4
 import shutil
+import io # Added for PyPDF2
 
 import magic_pdf.model as model_config
 import runpod
 from magic_pdf.pipe.UNIPipe import UNIPipe
 from magic_pdf.rw.DiskReaderWriter import DiskReaderWriter
+from pypdf import PdfReader # Added for PyPDF2
 
 from .office_converter import OfficeConverter, OfficeExts
 
@@ -24,6 +26,8 @@ def convert_to_markdown(pdf_bytes, tmp_dir, filename):
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(local_image_dir, exist_ok=True)
 
+    num_pages = 0 # Default page count
+
     try:
         # Handle office documents conversion
         if filename.endswith(OfficeExts.__args__):
@@ -32,18 +36,32 @@ def convert_to_markdown(pdf_bytes, tmp_dir, filename):
             output_file: Path = Path(tmp_dir) / f"{Path(filename).stem}.pdf"
             office_converter = OfficeConverter()
             office_converter.convert(input_file, output_file)
-            pdf_bytes = output_file.read_bytes()
-        elif not filename.endswith(".pdf"):
+            pdf_bytes_for_processing = output_file.read_bytes() # Use a different variable for processed bytes
+        elif filename.endswith(".pdf"):
+            pdf_bytes_for_processing = pdf_bytes # Use original bytes if already PDF
+        else:
             raise ValueError("Unsupported file type")
+
+        # Get page count using PyPDF2
+        try:
+            pdf_file_like_object = io.BytesIO(pdf_bytes_for_processing)
+            reader = PdfReader(pdf_file_like_object)
+            num_pages = len(reader.pages)
+        except Exception:
+            # Handle cases where PyPDF2 might fail (e.g., corrupted PDF)
+            # You might want to log this error or handle it differently
+            pass
+
 
         # Process PDF
         image_writer = DiskReaderWriter(local_image_dir)
         jso_useful_key = {"_pdf_type": "", "model_list": []}
-        pipe = UNIPipe(pdf_bytes, jso_useful_key, image_writer, is_debug=True)
+        pipe = UNIPipe(pdf_bytes_for_processing, jso_useful_key, image_writer, is_debug=False) # Use processed bytes
         pipe.pipe_classify()
         pipe.pipe_analyze()
         pipe.pipe_parse()
-        return pipe.pipe_mk_markdown(local_image_dir, drop_mode="none")
+        md_content = pipe.pipe_mk_markdown(local_image_dir, drop_mode="none")
+        return md_content, num_pages
     finally:
         # Clean up temporary directory
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -75,9 +93,9 @@ def init_model():
     from magic_pdf.model.doc_analyze_by_custom_model import ModelSingleton
     model_manager = ModelSingleton()
     print("About to init model")
-    txt_model = model_manager.get_model(False, False)  # noqa: F841
+    model_manager.get_model(False, False)  # noqa: F841
     print('txt_model init final')
-    ocr_model = model_manager.get_model(True, False)  # noqa: F841
+    model_manager.get_model(True, False)  # noqa: F841 # Renamed ocr_model
     print('ocr_model init final')
     return 0
 
@@ -100,8 +118,8 @@ def handler(event):
         tmp_dir = _tmp_dir.format(uuid=uuid_str)
 
         # Convert file to markdown
-        md_content = convert_to_markdown(pdf_bytes, tmp_dir, filename)
-        return {"markdown": md_content}
+        md_content, num_pages = convert_to_markdown(pdf_bytes, tmp_dir, filename) # Get num_pages
+        return {"markdown": md_content, "num_pages": num_pages} # Include num_pages in response
 
     except Exception as e:
         return {"error": str(e)}
