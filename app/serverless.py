@@ -115,16 +115,16 @@ def init_model():
     try:
         model_manager = ModelSingleton()
         txt_model = model_manager.get_model(False, False)  # noqa: F841
-        logger.info('txt_model init final') # Uses logger, we can use print
+        print('txt_model init final') # Uses logger, we can use print
         ocr_model = model_manager.get_model(True, False)  # noqa: F841
-        logger.info('ocr_model init final') # Uses logger, we can use print
+        print('ocr_model init final') # Uses logger, we can use print
         return 0
     except Exception as e:
-        logger.exception(e) # Uses logger, we can use print
+        print(e) # Uses logger, we can use print
         return -1
 
 model_init = init_model() # Called globally at startup
-logger.info(f'model_init: {model_init}') # Uses logger, we can use print
+print(f'model_init: {model_init}') # Uses logger, we can use print
 
 def handler(event):
     try:
