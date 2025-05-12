@@ -1,5 +1,5 @@
 from huggingface_hub import snapshot_download
-
+from modelscope import snapshot_download as modelscope_snapshot_download
 mineru_patterns = [
     "models/Layout/LayoutLMv3/*",
     "models/Layout/YOLO/*",
@@ -16,6 +16,6 @@ model_dir = snapshot_download(
     max_workers=20
 )
 
-layoutreader_model_dir = snapshot_download(
+layoutreader_model_dir = modelscope_snapshot_download(
     "ppaanngggg/layoutreader", local_dir="/root/layoutreader"
 )
