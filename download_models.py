@@ -1,4 +1,4 @@
-from modelscope import snapshot_download
+from huggingface_hub import snapshot_download
 
 mineru_patterns = [
     "models/Layout/LayoutLMv3/*",
@@ -13,6 +13,7 @@ model_dir = snapshot_download(
     "opendatalab/PDF-Extract-Kit-1.0",
     local_dir="/root/PDF-Extract-Kit",
     allow_patterns=mineru_patterns,
+    max_workers=20
 )
 
 layoutreader_model_dir = snapshot_download(
