@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 import shutil
 import io
+import asyncio
 
 import magic_pdf.model as model_config
 import runpod
@@ -126,7 +127,7 @@ def init_model():
 model_init = init_model() # Called globally at startup
 print(f'model_init: {model_init}') # Uses logger, we can use print
 
-def handler(event):
+async def handler(event):
     try:
         # Extract base64 encoded file and filename from the event
         input_data = event.get("input", {})
@@ -143,8 +144,11 @@ def handler(event):
         uuid_str = str(uuid4())
         tmp_dir = _tmp_dir.format(uuid=uuid_str)
 
-        # Convert file to markdown using the updated function
-        md_content, num_pages = convert_to_markdown(pdf_bytes, tmp_dir, filename)
+        # Convert file to markdown using the updated function in a separate thread
+        # Use asyncio.to_thread for the blocking function
+        md_content, num_pages = await asyncio.to_thread(
+            convert_to_markdown, pdf_bytes, tmp_dir, filename
+        )
         return {"markdown": md_content, "num_pages": num_pages}
 
     except Exception as e:
@@ -158,8 +162,24 @@ def handler(event):
 # print("Starting setup...")
 # setup()
 # print("Setup complete.")
+def adjust_concurrency(current_concurrency):
+    """
+    Dynamically adjust the worker's concurrency level based on request load.
+    
+    Args:
+        current_concurrency (int): The current concurrency level
+        
+    Returns:
+        int: The new concurrency level
+    """
+
+    
+    return 4
+
+
 
 print("Starting RunPod serverless handler...")
-runpod.serverless.start({"handler": handler})
+# Runpod will now use the async handler
+runpod.serverless.start({"handler": handler,"concurrency_modifier": adjust_concurrency})
 # This line might not be reached in normal serverless operation
 print("RunPod serverless handler finished.") 
