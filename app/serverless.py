@@ -4,7 +4,6 @@ from pathlib import Path
 from uuid import uuid4
 import shutil
 import io
-import asyncio
 
 import magic_pdf.model as model_config
 import runpod
@@ -24,7 +23,7 @@ model_config.__model_mode__ = "full"
 
 _tmp_dir = "/tmp/{uuid}"
 
-def convert_to_markdown(pdf_bytes, tmp_dir, filename):
+def convert_to_markdown(pdf_bytes, tmp_dir, filename,max_pages):
     """Convert file to markdown and handle office document conversion if needed"""
     # Set up temporary directories
     local_image_dir = Path(tmp_dir) / "images"
@@ -59,7 +58,8 @@ def convert_to_markdown(pdf_bytes, tmp_dir, filename):
             pass # Continue even if page count fails
 
         # --- Start New magic-pdf API implementation ---
-
+        if max_pages is not None and num_pages > max_pages:
+            raise ValueError(f"File has {num_pages} pages, but max_pages is set to {max_pages}")
         # 1. Setup Writer
         # Use str() for FileBasedDataWriter path
         image_writer = FileBasedDataWriter(str(local_image_dir))
@@ -133,6 +133,8 @@ async def handler(event):
         input_data = event.get("input", {})
         base64_content = input_data.get("file_content")
         filename = input_data.get("filename")
+        max_pages = input_data.get("max_pages", None)
+
 
         if not base64_content or not filename:
             return {"error": "Missing file_content or filename"}
@@ -146,9 +148,8 @@ async def handler(event):
 
         # Convert file to markdown using the updated function in a separate thread
         # Use asyncio.to_thread for the blocking function
-        md_content, num_pages = await asyncio.to_thread(
-            convert_to_markdown, pdf_bytes, tmp_dir, filename
-        )
+        md_content, num_pages = convert_to_markdown(pdf_bytes, tmp_dir, filename,max_pages)
+        
         return {"markdown": md_content, "num_pages": num_pages}
 
     except Exception as e:
@@ -158,28 +159,11 @@ async def handler(event):
         traceback.print_exc()
         return {"error": str(e)}
 
-# Call setup to initiate and warm up resources (optional, currently commented out)
-# print("Starting setup...")
-# setup()
-# print("Setup complete.")
-def adjust_concurrency(current_concurrency):
-    """
-    Dynamically adjust the worker's concurrency level based on request load.
-    
-    Args:
-        current_concurrency (int): The current concurrency level
-        
-    Returns:
-        int: The new concurrency level
-    """
-
-    
-    return 4
 
 
 
 print("Starting RunPod serverless handler...")
 # Runpod will now use the async handler
-runpod.serverless.start({"handler": handler,"concurrency_modifier": adjust_concurrency})
+runpod.serverless.start({"handler": handler})
 # This line might not be reached in normal serverless operation
 print("RunPod serverless handler finished.") 
