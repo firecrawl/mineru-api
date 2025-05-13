@@ -124,8 +124,9 @@ def init_model():
         print(e) # Uses logger, we can use print
         return -1
 
-model_init = init_model() # Called globally at startup
-print(f'model_init: {model_init}') # Uses logger, we can use print
+#lets not init the model here, cause it might not be needed and it runs on the first request anyways
+# model_init = init_model() # Called globally at startup
+# print(f'model_init: {model_init}') # Uses logger, we can use print
 
 async def handler(event):
     try:
