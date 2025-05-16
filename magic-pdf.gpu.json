@@ -1,21 +1,22 @@
 {
-    "bucket_info":{},
-    "temp-output-dir":"/tmp",
-    "models-dir":"/root/PDF-Extract-Kit/models",
-    "layoutreader-model-dir":"/root/layoutreader",
-    "device-mode":"cuda",
-    "layout-config": {
-        "model": "doclayout_yolo"
-    },
-    "formula-config": {
-        "mfd_model": "yolo_v8_mfd",
-        "mfr_model": "unimernet_small",
-        "enable": true
-    },
-    "table-config": {
-        "model": "rapid_table",
-        "enable": false,
-        "max_time": 400
-    },
-    "config_version": "1.0.0"
+  "bucket_info": {},
+  "temp-output-dir": "/tmp",
+  "models-dir": "/root/PDF-Extract-Kit/models",
+  "layoutreader-model-dir": "/root/layoutreader",
+  "device-mode": "cuda",
+  "layout-config": {
+    "model": "doclayout_yolo"
+  },
+  "formula-config": {
+    "mfd_model": "yolo_v8_mfd",
+    "mfr_model": "unimernet_small",
+    "enable": true
+  },
+  "table-config": {
+    "model": "rapid_table",
+    "sub_model": "slanet_plus",
+    "enable": true,
+    "max_time": 400
+  },
+  "config_version": "1.0.0"
 }
