@@ -170,8 +170,8 @@ async def handler(event):
         filename = input_data.get("filename")
         max_pages = input_data.get("max_pages", None)
 
-        timeout = event.get("timeout", None)
-        created_at = event.get("created_at", None)
+        timeout = input_data.get("timeout", None)
+        created_at = input_data.get("created_at", None)
         # Set default timeout if needed
         if timeout is not None:
             # Convert JS timeout value (likely milliseconds) to seconds
