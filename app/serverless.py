@@ -223,8 +223,6 @@ async def handler(event):
     except Exception as e:
         # Consider more specific error handling/logging
         print(f"Error in handler: {e}")
-        import traceback
-        traceback.print_exc()
         return {"error": str(e), "status": "ERROR"}
 
 
