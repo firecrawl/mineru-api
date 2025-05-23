@@ -9,9 +9,9 @@ RUN apt-get update && apt-get install -y tzdata
 # ENV TZ Asia/Tokyo
 
 RUN apt-get update && \
-    apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3.10 python3-pip && \
+    apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3 python3-pip python3-dev && \
     rm -rf /var/lib/apt/lists/*
-RUN curl -sSL https://install.python-poetry.org | POETRY_VERSION=${POETRY_VERSION} python3.10 -
+RUN curl -sSL https://install.python-poetry.org | POETRY_VERSION=${POETRY_VERSION} python3 -
 
 ENV APP_HOME /app
 WORKDIR $APP_HOME
@@ -34,13 +34,13 @@ RUN pip install runpod
 COPY . ./
 COPY magic-pdf.gpu.json /root/magic-pdf.json
 
-RUN python3.10 download_models.py
+RUN python3 download_models.py
 #serverless
-# CMD ["sh", "-c", "ls && python3.10 serverless.py"]
+# CMD ["sh", "-c", "ls && python3 serverless.py"]
 
 #download paddleocr model
 RUN sh download_model.sh
 
-CMD ["python3.10", "-m", "app.serverless"]
+CMD ["python3", "-m", "app.serverless"]
 
 # CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "3000"]
