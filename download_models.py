@@ -8,7 +8,7 @@ mineru_patterns = [
     "models/MFR/unimernet_hf_small_2503/*",
     "models/OCR/paddleocr_torch/*",
 
-    "models/TabRec/TableMaster/*",
+    # "models/TabRec/TableMaster/*", we dont use this atm
 
 
 
