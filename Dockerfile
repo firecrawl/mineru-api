@@ -1,6 +1,6 @@
 ARG POETRY_VERSION=1.6.1
 
-FROM nvidia/cuda:12.9.0-devel-ubuntu24.04
+FROM nvidia/cuda:12.8.1-devel-ubuntu24.04
 # Allow statements and log messages to immediately appear in the logs
 ENV PYTHONUNBUFFERED True
 
