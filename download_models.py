@@ -5,7 +5,7 @@ mineru_patterns = [
     "models/Layout/YOLO/*",
     "models/MFD/YOLO/*",
     
-    "models/MFR/unimernet_small_2501/*",
+    "models/MFR/unimernet_hf_small_2503/*",
     "models/TabRec/TableMaster/*",
     "models/TabRec/StructEqTable/*",
 ]
