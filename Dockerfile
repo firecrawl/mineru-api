@@ -33,7 +33,7 @@ ENV PATH="$APP_HOME/.venv/bin:$PATH"
 # RUN pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
 
 #for runpod serverless
-RUN pip install runpod
+# RUN pip install runpod
 
 
 COPY . ./
