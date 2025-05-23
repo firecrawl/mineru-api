@@ -1,5 +1,5 @@
 from huggingface_hub import snapshot_download
-from modelscope import snapshot_download as modelscope_snapshot_download
+# from modelscope import snapshot_download as modelscope_snapshot_download
 mineru_patterns = [
     # "models/Layout/LayoutLMv3/*",
     
@@ -21,7 +21,10 @@ model_dir = snapshot_download(
     max_workers=20
 )
 # /root/PDF-Extract-Kit/models/OCR/paddleocr_torch/ch_PP-OCRv3_det_infer.pth
-
-layoutreader_model_dir = modelscope_snapshot_download(
-    "ppaanngggg/layoutreader", local_dir="/root/layoutreader"
+# hantian/layoutreader
+layoutreader_model_dir = snapshot_download(
+    "hantian/layoutreader", local_dir="/root/layoutreader"
 )
+# layoutreader_model_dir = modelscope_snapshot_download(
+#     "ppaanngggg/layoutreader", local_dir="/root/layoutreader"
+# )
