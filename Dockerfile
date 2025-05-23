@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y tzdata
 RUN apt-get update && \
     apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3 python3-pip python3-dev && \
     rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --upgrade pip setuptools wheel
+
 RUN curl -sSL https://install.python-poetry.org | POETRY_VERSION=${POETRY_VERSION} python3 -
 
 ENV APP_HOME /app
