@@ -12,7 +12,7 @@ RUN apt-get update && \
     apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3 python3-pip python3-dev && \
     rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages
+RUN python3 -m pip install --upgrade pip setuptools --break-system-packages
 
 RUN curl -sSL https://install.python-poetry.org | POETRY_VERSION=${POETRY_VERSION} python3 -
 
