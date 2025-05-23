@@ -12,7 +12,6 @@ RUN apt-get update && \
     apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3 python3-pip python3-dev && \
     rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --upgrade pip setuptools --break-system-packages
 
 RUN curl -sSL https://install.python-poetry.org | POETRY_VERSION=${POETRY_VERSION} python3 -
 
@@ -22,10 +21,13 @@ WORKDIR $APP_HOME
 COPY pyproject.toml poetry.lock ./
 
 ENV PATH="/root/.local/bin:$PATH"
-RUN poetry config virtualenvs.create false && \
+RUN poetry config virtualenvs.in-project true && \
     poetry install --no-interaction --no-root && \
     rm -rf /root/.cache/pypoetry && \
     rm -rf /root/.cache/pip
+
+# Add the virtual environment's bin directory to PATH
+ENV PATH="$APP_HOME/.venv/bin:$PATH"
 
 #use paddlegpu
 RUN pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
