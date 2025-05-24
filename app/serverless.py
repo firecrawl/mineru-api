@@ -30,14 +30,13 @@ class TimeoutError(Exception):
     """Custom timeout exception."""
     pass
 
-def convert_to_markdown(pdf_bytes, tmp_dir, filename, max_pages):
+def convert_to_markdown(pdf_bytes, tmp_dir, filename):
     """Convert file to markdown and handle office document conversion if needed"""
     # Set up temporary directories
     local_image_dir = Path(tmp_dir) / "images"
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(local_image_dir, exist_ok=True)
 
-    num_pages = 0 # Default page count
     pdf_bytes_for_processing = None
 
     try:
@@ -54,19 +53,8 @@ def convert_to_markdown(pdf_bytes, tmp_dir, filename, max_pages):
         else:
             raise ValueError("Unsupported file type")
 
-        # Get page count using pypdf
-        try:
-            pdf_file_like_object = io.BytesIO(pdf_bytes_for_processing)
-            reader = PdfReader(pdf_file_like_object)
-            num_pages = len(reader.pages)
-        except Exception as e:
-            # Log or handle pypdf errors if necessary
-            print(f"Could not get page count using pypdf: {e}")
-            pass # Continue even if page count fails
 
         # --- Start New magic-pdf API implementation ---
-        if max_pages is not None and num_pages > max_pages:
-            raise ValueError(f"File has {num_pages} pages, but max_pages is set to {max_pages}")
         # 1. Setup Writer
         # Use str() for FileBasedDataWriter path
         image_writer = FileBasedDataWriter(str(local_image_dir))
@@ -88,7 +76,7 @@ def convert_to_markdown(pdf_bytes, tmp_dir, filename, max_pages):
 
         # --- End New magic-pdf API implementation ---
 
-        return md_content, num_pages
+        return md_content
     finally:
         # Clean up temporary directory
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -108,7 +96,7 @@ def setup():
         try:
             # Use a dedicated temp dir for warmup
             warmup_tmp_dir = "/tmp/warmup_" + str(uuid4())
-            convert_to_markdown(sample_pdf_bytes, warmup_tmp_dir, filename, None)  # Pass None for max_pages
+            convert_to_markdown(sample_pdf_bytes, warmup_tmp_dir, filename)
             print("Warmup finished.")
         except Exception as e:
             print(f"Warmup failed: {e}")
@@ -140,7 +128,7 @@ else:
     print("Model not initialized")
     
 # Wrap convert_to_markdown in an async function for timeout control
-async def async_convert_to_markdown(pdf_bytes, tmp_dir, filename, max_pages, timeout_seconds=None):
+async def async_convert_to_markdown(pdf_bytes, tmp_dir, filename, timeout_seconds=None):
     """Async wrapper for convert_to_markdown that respects timeouts"""
     # Use a separate thread for CPU-bound work
     loop = asyncio.get_running_loop()
@@ -149,7 +137,7 @@ async def async_convert_to_markdown(pdf_bytes, tmp_dir, filename, max_pages, tim
         # Use asyncio.wait_for to enforce timeout
         try:
             result = await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, tmp_dir, filename, max_pages)),
+                loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, tmp_dir, filename)),
                 timeout=timeout_seconds
             )
             return result
@@ -159,7 +147,7 @@ async def async_convert_to_markdown(pdf_bytes, tmp_dir, filename, max_pages, tim
             raise TimeoutError(f"PDF processing timed out after {timeout_seconds} seconds")
     else:
         # No timeout, just run normally
-        return await loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, tmp_dir, filename, max_pages))
+        return await loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, tmp_dir, filename))
 
 async def handler(event):
     try:
@@ -168,10 +156,10 @@ async def handler(event):
         input_data = event.get("input", {})
         base64_content = input_data.get("file_content")
         filename = input_data.get("filename")
-        max_pages = input_data.get("max_pages", None)
 
         timeout = input_data.get("timeout", None)
         created_at = input_data.get("created_at", None)
+
         # Set default timeout if needed
         if timeout is not None:
             # Convert JS timeout value (likely milliseconds) to seconds
@@ -213,10 +201,11 @@ async def handler(event):
 
         try:
             # Use the async wrapper with timeout control
-            md_content, num_pages = await async_convert_to_markdown(
-                pdf_bytes, tmp_dir, filename, max_pages, timeout_seconds
+            md_content = await async_convert_to_markdown(
+                pdf_bytes, tmp_dir, filename, timeout_seconds
             )
-            return {"markdown": md_content, "num_pages": num_pages, "status": "SUCCESS"}
+
+            return {"markdown": md_content, "status": "SUCCESS"}
         except TimeoutError as e:
             return {"error": str(e), "status": "TIMEOUT"}
 
@@ -224,6 +213,9 @@ async def handler(event):
         # Consider more specific error handling/logging
         print(f"Error in handler: {e}")
         return {"error": str(e), "status": "ERROR"}
+    finally:
+        # Clean up temp directory
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 

@@ -15,7 +15,7 @@
   "table-config": {
     "model": "rapid_table",
     "sub_model": "slanet_plus",
-    "enable": false,
+    "enable": true,
     "max_time": 400
   },
   "config_version": "1.0.0"
