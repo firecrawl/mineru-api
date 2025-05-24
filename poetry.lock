@@ -366,18 +366,18 @@ typecheck = ["mypy"]
 
 [[package]]
 name = "boto3"
-version = "1.38.22"
+version = "1.38.23"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "boto3-1.38.22-py3-none-any.whl", hash = "sha256:760c85ab6dd78f12aa669269ca917d313fe02378722dc3b8ab41a8dc13b2a999"},
-    {file = "boto3-1.38.22.tar.gz", hash = "sha256:008f6a7c2f9f306984f9bd00c331d70341124aaa7dfebcb0466ecbda6619884a"},
+    {file = "boto3-1.38.23-py3-none-any.whl", hash = "sha256:70ab8364f1f6f0a7e0eaf97f62fbdacf9c1e4cc1de330faf1c146ef9ab01e7d0"},
+    {file = "boto3-1.38.23.tar.gz", hash = "sha256:bcf73aca469add09e165b8793be18e7578db8d2604d82505ab13dc2495bad982"},
 ]
 
 [package.dependencies]
-botocore = ">=1.38.22,<1.39.0"
+botocore = ">=1.38.23,<1.39.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.13.0,<0.14.0"
 
@@ -386,14 +386,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.38.22"
+version = "1.38.23"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "botocore-1.38.22-py3-none-any.whl", hash = "sha256:0e524cc763eced7c87ab256338ebd247ce10d1eb11d5cc4f71a3bd82611739e8"},
-    {file = "botocore-1.38.22.tar.gz", hash = "sha256:3b464984674f97367ca1dfa29bdbce499327571208aaec2f9743f66e54d9ba05"},
+    {file = "botocore-1.38.23-py3-none-any.whl", hash = "sha256:a7f818672f10d7a080c2c4558428011c3e0abc1039a047d27ac76ec846158457"},
+    {file = "botocore-1.38.23.tar.gz", hash = "sha256:29685c91050a870c3809238dc5da1ac65a48a3a20b4bca46b6057dcb6b39c72a"},
 ]
 
 [package.dependencies]
@@ -1478,14 +1478,14 @@ files = [
 
 [[package]]
 name = "fsspec"
-version = "2025.5.0"
+version = "2025.5.1"
 description = "File-system specification"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "fsspec-2025.5.0-py3-none-any.whl", hash = "sha256:0ca253eca6b5333d8a2b8bd98c7326fe821f1f0fdbd34e1b445bddde8e804c95"},
-    {file = "fsspec-2025.5.0.tar.gz", hash = "sha256:e4f4623bb6221f7407fd695cc535d1f857a077eb247580f4ada34f5dc25fd5c8"},
+    {file = "fsspec-2025.5.1-py3-none-any.whl", hash = "sha256:24d3a2e663d5fc735ab256263c4075f374a174c3410c0b25e5bd1970bceaa462"},
+    {file = "fsspec-2025.5.1.tar.gz", hash = "sha256:2e55e47a540b91843b755e83ded97c6e897fa0942b11490113f09e9c443c2475"},
 ]
 
 [package.extras]
@@ -2068,13 +2068,13 @@ dev = ["Sphinx (==8.1.3) ; python_version >= \"3.11\"", "build (==1.2.2) ; pytho
 
 [[package]]
 name = "magic-pdf"
-version = "1.3.11"
+version = "1.3.12"
 description = "A practical tool for converting PDF to Markdown"
 optional = false
 python-versions = "<3.14,>=3.10"
 groups = ["main"]
 files = [
-    {file = "magic_pdf-1.3.11-py3-none-any.whl", hash = "sha256:453024108ce13c560d8f919d7a8f5cbabf4bd24127728c55188d8db3dd1ee168"},
+    {file = "magic_pdf-1.3.12-py3-none-any.whl", hash = "sha256:be87b9b6dd05d8a1b89263b0e1b1a2bce6899a7be30eddf5c206cc174893e99b"},
 ]
 
 [package.dependencies]
@@ -2274,39 +2274,6 @@ files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
 ]
-
-[[package]]
-name = "modelscope"
-version = "1.26.0"
-description = "ModelScope: bring the notion of Model-as-a-Service to life."
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "modelscope-1.26.0-py3-none-any.whl", hash = "sha256:fdb23191cdf8d5811accefc09ef4594f3b7c5f1d165af9194dc64eba96780c3a"},
-    {file = "modelscope-1.26.0.tar.gz", hash = "sha256:3178d82ce795ba1a5472eacefda517e1f2162186e4f9f9641cf6587d2c368bc1"},
-]
-
-[package.dependencies]
-requests = ">=2.25"
-tqdm = ">=4.64.0"
-urllib3 = ">=1.26"
-
-[package.extras]
-all = ["Pillow", "Pillow (>=6.2.0)", "PyMCubes (<=0.1.4)", "accelerate", "addict", "albumentations (>=1.0.3)", "attrs", "av (>=9.2.0)", "biopython", "bmt-clipit (>=1.0)", "boto3", "chumpy", "clip (>=1.0)", "cloudpickle", "control-ldm", "datasets (>=3.0.0,<=3.2.0)", "ddpm-guided-diffusion (==0.0.0)", "decord (>=0.6.0)", "diffusers", "diffusers (>=0.25.0)", "easydict", "edit-distance", "einops", "embeddings", "face-alignment (>=1.3.5)", "fairscale (>=0.4.1)", "fastai (>=1.0.51)", "fastapi", "ffmpeg (>=1.4)", "ffmpeg-python (>=0.2.0)", "filelock", "ftfy", "ftfy (>=6.0.3)", "fvcore", "imageio (>=2.9.0)", "imageio-ffmpeg (>=0.4.2)", "imgaug (>=0.4.0)", "iopath", "ipdb", "jieba (>=0.42.1)", "kornia (>=0.5.0)", "librosa (==0.10.1)", "lmdb", "lpips", "matplotlib", "matplotlib (>=3.8.0)", "megatron-util", "ml-collections", "mmcls (>=0.21.0)", "mmdet (>=2.25.0,<=2.28.2)", "mmdet3d (==1.0.0a1)", "mmsegmentation (<=0.30.0)", "moviepy (==1.0.3)", "nerfacc (==0.2.2)", "networkx", "nltk", "numba", "omegaconf", "onnx", "onnxruntime (>=1.10)", "onnxsim", "open-clip-torch (>=2.7.0)", "opencv-python", "oss2", "paint-ldm", "pandas", "panopticapi", "plyfile (>=0.7.4)", "protobuf (>=3.19.0,<3.21.0)", "psutil", "pyclipper", "pycocoevalcap (>=1.2)", "pycocotools (>=2.0.4)", "pydot", "pythainlp", "python-dateutil (>=2.1)", "pytorch-lightning", "pytorch-lightning (<=1.7.7)", "pyvi", "rapidfuzz", "regex", "requests (>=2.25)", "rouge", "rouge-score (<=0.0.4)", "sacrebleu", "sacremoses (>=0.0.41)", "safetensors", "scikit-image", "scikit-learn", "scipy", "sentencepiece", "seqeval", "setuptools (==69.5.1)", "shapely", "shotdetect-scenedetect-lgss (==0.0.4)", "simplejson (>=3.3.0)", "smplx", "sortedcontainers (>=1.5.9)", "soundfile", "spacy (>=2.3.5,<=3.7.0)", "sse-starlette", "stanza", "subword-nmt (>=0.3.8)", "taming-transformers-rom1504", "tensorboardX", "tensorflow-estimator (>=1.15.1)", "termcolor", "tf-slim", "thop", "timm", "timm (>=0.4.9)", "tokenizers", "torch-scatter", "torchmetrics (>=0.6.2)", "torchsummary (>=1.5.1)", "torchvision", "tqdm", "tqdm (>=4.64.0)", "transformers", "transformers (>=4.12.0)", "transformers (>=4.26.0)", "transformers (>=4.27.1)", "trimesh", "ujson", "unicodedata2", "urllib3 (>=1.26)", "utils", "uvicorn", "videofeatures-clipit (>=1.0)", "yacs", "zhconv"]
-audio = ["MinDAEC (==0.0.2)", "Pillow", "PyWavelets (>=1.0.0)", "SoundFile (>0.10)", "addict", "attrs", "bitstring", "datasets (>=3.0.0,<=3.2.0)", "einops", "funasr (>=1.0.0)", "greenlet (>=1.1.2)", "hdbscan", "hyperpyyaml", "inflect", "jedi (>=0.18.1)", "kaldiio", "kantts", "librosa (==0.10.1)", "lxml", "matplotlib", "mir-eval (>=0.7)", "ms-funcodec (>=0.2.0)", "msgpack (>=1.0.4)", "parso (>=0.8.3)", "pexpect (>=4.8.0)", "pickleshare (>=0.7.5)", "prompt-toolkit (>=3.0.30)", "protobuf", "ptflops", "ptyprocess (>=0.7.0)", "py-sound-connect (>=0.1)", "pygments (>=2.12.0)", "python-dateutil (>=2.1)", "pytorch-wavelets", "rotary-embedding-torch (>=0.1.5)", "scikit-learn", "scipy", "setuptools (==69.5.1)", "simplejson (>=3.3.0)", "sortedcontainers (>=1.5.9)", "sox", "speechbrain (>=0.5.12)", "tensorboardX", "torchaudio", "tqdm", "traitlets (>=5.3.0)", "transformers", "umap-learn", "unidecode", "urllib3 (>=1.26)", "wcwidth (>=0.2.5)"]
-audio-asr = ["Pillow", "addict", "attrs", "datasets (>=3.0.0,<=3.2.0)", "einops", "funasr (>=1.0.0)", "python-dateutil (>=2.1)", "scipy", "setuptools (==69.5.1)", "simplejson (>=3.3.0)", "sortedcontainers (>=1.5.9)", "transformers", "urllib3 (>=1.26)"]
-audio-kws = ["Pillow", "SoundFile (>0.10)", "addict", "attrs", "datasets (>=3.0.0,<=3.2.0)", "einops", "kaldiio", "matplotlib", "py-sound-connect (>=0.1)", "python-dateutil (>=2.1)", "scipy", "setuptools (==69.5.1)", "simplejson (>=3.3.0)", "sortedcontainers (>=1.5.9)", "tensorboardX", "transformers", "urllib3 (>=1.26)"]
-audio-signal = ["MinDAEC (==0.0.2)", "Pillow", "SoundFile (>0.10)", "addict", "attrs", "datasets (>=3.0.0,<=3.2.0)", "einops", "hdbscan", "hyperpyyaml", "librosa (==0.10.1)", "mir-eval (>=0.7)", "python-dateutil (>=2.1)", "rotary-embedding-torch (>=0.1.5)", "scipy", "setuptools (==69.5.1)", "simplejson (>=3.3.0)", "sortedcontainers (>=1.5.9)", "speechbrain (>=0.5.12)", "torchaudio", "tqdm", "transformers", "umap-learn", "urllib3 (>=1.26)"]
-audio-tts = ["Pillow", "PyWavelets (>=1.0.0)", "addict", "attrs", "bitstring", "datasets (>=3.0.0,<=3.2.0)", "einops", "greenlet (>=1.1.2)", "inflect", "jedi (>=0.18.1)", "kantts", "librosa (==0.10.1)", "lxml", "matplotlib", "msgpack (>=1.0.4)", "parso (>=0.8.3)", "pexpect (>=4.8.0)", "pickleshare (>=0.7.5)", "prompt-toolkit (>=3.0.30)", "protobuf", "ptflops", "ptyprocess (>=0.7.0)", "pygments (>=2.12.0)", "python-dateutil (>=2.1)", "pytorch-wavelets", "scikit-learn", "scipy", "setuptools (==69.5.1)", "simplejson (>=3.3.0)", "sortedcontainers (>=1.5.9)", "sox", "tensorboardx", "tqdm", "traitlets (>=5.3.0)", "transformers", "unidecode", "urllib3 (>=1.26)", "wcwidth (>=0.2.5)"]
-cv = ["Pillow", "Pillow (>=6.2.0)", "PyMCubes (<=0.1.4)", "accelerate", "addict", "albumentations (>=1.0.3)", "attrs", "av (>=9.2.0)", "bmt-clipit (>=1.0)", "chumpy", "clip (>=1.0)", "control-ldm", "datasets (>=3.0.0,<=3.2.0)", "ddpm-guided-diffusion (==0.0.0)", "diffusers", "easydict", "edit-distance", "einops", "face-alignment (>=1.3.5)", "fairscale (>=0.4.1)", "fastai (>=1.0.51)", "ffmpeg (>=1.4)", "ffmpeg-python (>=0.2.0)", "ftfy", "fvcore", "imageio (>=2.9.0)", "imageio-ffmpeg (>=0.4.2)", "imgaug (>=0.4.0)", "kornia (>=0.5.0)", "lmdb", "lpips", "matplotlib (>=3.8.0)", "ml-collections", "mmcls (>=0.21.0)", "mmdet (>=2.25.0,<=2.28.2)", "mmdet3d (==1.0.0a1)", "mmsegmentation (<=0.30.0)", "moviepy (==1.0.3)", "nerfacc (==0.2.2)", "networkx", "numba", "omegaconf", "onnx", "onnxruntime (>=1.10)", "onnxsim", "open-clip-torch (>=2.7.0)", "opencv-python", "paint-ldm", "pandas", "panopticapi", "plyfile (>=0.7.4)", "psutil", "pyclipper", "python-dateutil (>=2.1)", "pytorch-lightning", "regex", "scikit-image", "scikit-learn", "scipy", "setuptools (==69.5.1)", "shapely", "shotdetect-scenedetect-lgss (==0.0.4)", "simplejson (>=3.3.0)", "smplx", "sortedcontainers (>=1.5.9)", "tensorflow-estimator (>=1.15.1)", "tf-slim", "thop", "timm (>=0.4.9)", "torch-scatter", "torchmetrics (>=0.6.2)", "torchsummary (>=1.5.1)", "torchvision", "tqdm", "transformers", "transformers (>=4.26.0)", "trimesh", "ujson", "urllib3 (>=1.26)", "utils", "videofeatures-clipit (>=1.0)", "yacs"]
-datasets = ["Pillow", "addict", "attrs", "datasets (>=3.0.0,<=3.2.0)", "einops", "oss2", "python-dateutil (>=2.1)", "scipy", "setuptools (==69.5.1)", "simplejson (>=3.3.0)", "sortedcontainers (>=1.5.9)", "urllib3 (>=1.26)"]
-framework = ["Pillow", "addict", "attrs", "datasets (>=3.0.0,<=3.2.0)", "einops", "python-dateutil (>=2.1)", "scipy", "setuptools (==69.5.1)", "simplejson (>=3.3.0)", "sortedcontainers (>=1.5.9)", "transformers", "urllib3 (>=1.26)"]
-hub = ["requests (>=2.25)", "tqdm (>=4.64.0)", "urllib3 (>=1.26)"]
-multi-modal = ["Pillow", "accelerate", "addict", "attrs", "cloudpickle", "datasets (>=3.0.0,<=3.2.0)", "decord (>=0.6.0)", "diffusers (>=0.25.0)", "einops", "ftfy (>=6.0.3)", "librosa (==0.10.1)", "opencv-python", "pycocoevalcap (>=1.2)", "pycocotools (>=2.0.4)", "pydot", "python-dateutil (>=2.1)", "pytorch-lightning (<=1.7.7)", "rapidfuzz", "rouge-score (<=0.0.4)", "sacrebleu", "safetensors", "scipy", "setuptools (==69.5.1)", "simplejson (>=3.3.0)", "sortedcontainers (>=1.5.9)", "soundfile", "taming-transformers-rom1504", "timm", "tokenizers", "torchvision", "transformers", "transformers (>=4.27.1)", "unicodedata2", "urllib3 (>=1.26)", "zhconv"]
-nlp = ["Pillow", "addict", "attrs", "boto3", "datasets (>=3.0.0,<=3.2.0)", "einops", "embeddings", "filelock", "ftfy", "jieba (>=0.42.1)", "matplotlib", "megatron-util", "nltk", "pandas", "protobuf (>=3.19.0,<3.21.0)", "pythainlp", "python-dateutil (>=2.1)", "pyvi", "regex", "rouge", "sacremoses (>=0.0.41)", "scikit-learn", "scipy", "sentencepiece", "seqeval", "setuptools (==69.5.1)", "simplejson (>=3.3.0)", "sortedcontainers (>=1.5.9)", "spacy (>=2.3.5,<=3.7.0)", "stanza", "subword-nmt (>=0.3.8)", "termcolor", "tokenizers", "transformers", "transformers (>=4.12.0)", "urllib3 (>=1.26)", "zhconv"]
-science = ["Pillow", "addict", "attrs", "biopython", "datasets (>=3.0.0,<=3.2.0)", "einops", "iopath", "ipdb", "lmdb", "ml-collections", "python-dateutil (>=2.1)", "scipy", "setuptools (==69.5.1)", "simplejson (>=3.3.0)", "sortedcontainers (>=1.5.9)", "tensorboardX", "tokenizers", "transformers", "urllib3 (>=1.26)"]
-server = ["fastapi", "sse-starlette", "uvicorn"]
 
 [[package]]
 name = "mpmath"
@@ -5341,14 +5308,14 @@ files = [
 
 [[package]]
 name = "ultralytics"
-version = "8.3.143"
+version = "8.3.144"
 description = "Ultralytics YOLO 🚀 for SOTA object detection, multi-object tracking, instance segmentation, pose estimation and image classification."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "ultralytics-8.3.143-py3-none-any.whl", hash = "sha256:177436bd209de735d629c514e0e4bf36858e8443c4a8604bdff132bc85c8064d"},
-    {file = "ultralytics-8.3.143.tar.gz", hash = "sha256:7ccad1df80153227afea583fd4d3b8793bfe912f07db059efd6772f308f6d4c7"},
+    {file = "ultralytics-8.3.144-py3-none-any.whl", hash = "sha256:ac57282cd92ea236dd831ca2650f7e9849604895b269abb205c3f0c0fd6c2a44"},
+    {file = "ultralytics-8.3.144.tar.gz", hash = "sha256:a4a975bbc051b1bacd05258b1010f59af8d49d3b16e4c0c6b23de2eb2abb690a"},
 ]
 
 [package.dependencies]
@@ -5847,4 +5814,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "916ee2d18c55ea5d8d6cfa5b0dbecb6f7055d5f7014e8fa9dc879fcca6288cbc"
+content-hash = "82f182aaeef1e9055b0d7a4c13854635a4c9be6dac3c07aa0c57d0841b0124e9"
