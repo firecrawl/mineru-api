@@ -79,7 +79,7 @@ async def handler(event):
         created_at = input_data.get("created_at")
         
         # Processing options
-        lang = input_data.get("lang", "ch")
+        lang = input_data.get("lang", "en")
         parse_method = input_data.get("parse_method", "auto")
         formula_enable = input_data.get("formula_enable", True)
         table_enable = input_data.get("table_enable", True)
