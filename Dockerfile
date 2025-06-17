@@ -37,15 +37,11 @@ ENV PATH="$APP_HOME/.venv/bin:$PATH"
 
 
 COPY . ./
-COPY magic-pdf.gpu.json /root/magic-pdf.json
 
-RUN python3 download_models.py
-#serverless
-# CMD ["sh", "-c", "ls && python3 serverless.py"]
+RUN /bin/bash -c "mineru-models-download -s huggingface -m all"
 
-#download paddleocr model
-RUN sh download_model.sh
-
-CMD ["python3", "-m", "app.serverless"]
+# Set the entry point to activate the virtual environment and run the command line tool
+ENTRYPOINT ["/bin/bash", "-c", "export MINERU_MODEL_SOURCE=local && python3 -m app.serverless"]
+# CMD ["python3", "-m", "app.serverless"]
 
 # CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "3000"]

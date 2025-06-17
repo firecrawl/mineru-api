@@ -1,227 +1,126 @@
 import base64
 import os
 import time
-from pathlib import Path
-from uuid import uuid4
-import shutil
-import io
-import asyncio  # Add asyncio for async/await and timeout
+import asyncio
+import tempfile
+import copy
 
-import magic_pdf.model as model_config
 import runpod
-from pypdf import PdfReader
 
-# New magic-pdf imports based on example
-from magic_pdf.data.data_reader_writer import FileBasedDataWriter
-from magic_pdf.data.dataset import PymuDocDataset
-from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
-from magic_pdf.config.enums import SupportedPdfParseMethod
+# New mineru imports
+from mineru.data.data_reader_writer import FileBasedDataWriter
+from mineru.utils.enum_class import MakeMode
+from mineru.backend.pipeline.pipeline_analyze import doc_analyze as pipeline_doc_analyze
+from mineru.backend.pipeline.pipeline_middle_json_mkcontent import union_make as pipeline_union_make
+from mineru.backend.pipeline.model_json_to_middle_json import result_to_middle_json as pipeline_result_to_middle_json
 
-from .office_converter import OfficeConverter, OfficeExts
-
-# Configure model settings (Keep for now, might be handled differently by new API)
-model_config.__use_inside_model__ = True
-model_config.__model_mode__ = "full"
-
-_tmp_dir = "/tmp/{uuid}"
-
-# Define custom TimeoutError for timeout handling
 class TimeoutError(Exception):
-    """Custom timeout exception."""
     pass
 
-def convert_to_markdown(pdf_bytes, tmp_dir, filename):
-    """Convert file to markdown and handle office document conversion if needed"""
-    # Set up temporary directories
-    local_image_dir = Path(tmp_dir) / "images"
-    os.makedirs(tmp_dir, exist_ok=True)
-    os.makedirs(local_image_dir, exist_ok=True)
-
-    pdf_bytes_for_processing = None
-
-    try:
-        # Handle office documents conversion
-        if filename.endswith(OfficeExts.__args__):
-            input_file: Path = Path(tmp_dir) / filename
-            input_file.write_bytes(pdf_bytes)
-            output_file: Path = Path(tmp_dir) / f"{Path(filename).stem}.pdf"
-            office_converter = OfficeConverter()
-            office_converter.convert(input_file, output_file)
-            pdf_bytes_for_processing = output_file.read_bytes()
-        elif filename.endswith(".pdf"):
-            pdf_bytes_for_processing = pdf_bytes
-        else:
-            raise ValueError("Unsupported file type")
-
-
-        # --- Start New magic-pdf API implementation ---
-        # 1. Setup Writer
-        # Use str() for FileBasedDataWriter path
-        image_writer = FileBasedDataWriter(str(local_image_dir))
-        relative_image_dir = str(local_image_dir.name) # Should be "images"
-
-        # 2. Create Dataset
-        ds = PymuDocDataset(pdf_bytes_for_processing)
-
-        # 3. Classify and Apply model
-        if ds.classify() == SupportedPdfParseMethod.OCR:
-            infer_result = ds.apply(doc_analyze, ocr=True)
-            pipe_result = infer_result.pipe_ocr_mode(image_writer)
-        else:
-            infer_result = ds.apply(doc_analyze, ocr=False)
-            pipe_result = infer_result.pipe_txt_mode(image_writer)
-
-        # 4. Get Markdown
-        md_content = pipe_result.get_markdown(relative_image_dir)
-
-        # --- End New magic-pdf API implementation ---
-
-        return md_content
-    finally:
-        # Clean up temporary directory
-        shutil.rmtree(tmp_dir, ignore_errors=True)
-
-def setup():
-    # Create a sample directory for initialization
-    # This function will now use the updated convert_to_markdown
-    sample_dir = "../pdfs"
-    filename = "small_ocr2.pdf"
-    sample_pdf_path = os.path.join(sample_dir, filename)
-
-    if os.path.exists(sample_pdf_path):
-        with open(sample_pdf_path, "rb") as f:
-            sample_pdf_bytes = f.read()
-        # Warm up the conversion process
-        print("Warming up convert_to_markdown...")
-        try:
-            # Use a dedicated temp dir for warmup
-            warmup_tmp_dir = "/tmp/warmup_" + str(uuid4())
-            convert_to_markdown(sample_pdf_bytes, warmup_tmp_dir, filename)
-            print("Warmup finished.")
-        except Exception as e:
-            print(f"Warmup failed: {e}")
-        finally:
-            if 'warmup_tmp_dir' in locals() and os.path.exists(warmup_tmp_dir):
-                 shutil.rmtree(warmup_tmp_dir, ignore_errors=True)
-    else:
-        print(f"Warmup file not found: {sample_pdf_path}, skipping warmup.")
-
-def init_model():
-    from magic_pdf.model.doc_analyze_by_custom_model import ModelSingleton
-    try:
-        model_manager = ModelSingleton()
-        txt_model = model_manager.get_model(False, False)  # noqa: F841
-        print('txt_model init final') # Uses logger, we can use print
-        ocr_model = model_manager.get_model(True, False)  # noqa: F841
-        print('ocr_model init final') # Uses logger, we can use print
-        return 0
-    except Exception as e:
-        print(e) # Uses logger, we can use print
-        return -1
-
-#lets not init the model here, cause it might not be needed and it runs on the first request anyways
-#check an env variable to see if we should init the model
-if os.getenv("INIT_MODEL") == "true":
-    model_init = init_model() # Called globally at startup
-    print(f'model_init: {model_init}') # Uses logger, we can use print
-else:
-    print("Model not initialized")
+def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enable=True, table_enable=True):
+    """Convert PDF bytes to markdown - returns only the markdown string"""
     
-# Wrap convert_to_markdown in an async function for timeout control
-async def async_convert_to_markdown(pdf_bytes, tmp_dir, filename, timeout_seconds=None):
-    """Async wrapper for convert_to_markdown that respects timeouts"""
-    # Use a separate thread for CPU-bound work
+    try:
+        # Analyze the PDF
+        infer_results, all_image_lists, all_pdf_docs, lang_list_result, ocr_enabled_list = pipeline_doc_analyze(
+            [pdf_bytes], 
+            [lang], 
+            parse_method=parse_method, 
+            formula_enable=formula_enable,
+            table_enable=table_enable
+        )
+        
+        # Process results
+        model_list = infer_results[0]
+        images_list = all_image_lists[0]
+        pdf_doc = all_pdf_docs[0]
+        _lang = lang_list_result[0]
+        _ocr_enable = ocr_enabled_list[0]
+        
+        # Create temporary image directory for any image processing
+        with tempfile.TemporaryDirectory() as temp_dir:
+            image_writer = FileBasedDataWriter(temp_dir)
+            
+            # Convert to middle JSON format
+            middle_json = pipeline_result_to_middle_json(
+                model_list, images_list, pdf_doc, image_writer, 
+                _lang, _ocr_enable, formula_enable
+            )
+            
+            # Generate and return markdown
+            pdf_info = middle_json["pdf_info"]
+            return pipeline_union_make(pdf_info, MakeMode.MM_MD, "images")
+            
+    except Exception as e:
+        raise Exception(f"Error converting PDF to markdown: {str(e)}")
+
+async def async_convert_to_markdown(pdf_bytes, timeout_seconds=None, **kwargs):
+    """Async wrapper with timeout support"""
     loop = asyncio.get_running_loop()
     
-    if timeout_seconds is not None and timeout_seconds > 0:
-        # Use asyncio.wait_for to enforce timeout
+    if timeout_seconds and timeout_seconds > 0:
         try:
-            result = await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, tmp_dir, filename)),
+            return await asyncio.wait_for(
+                loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, **kwargs)),
                 timeout=timeout_seconds
             )
-            return result
         except asyncio.TimeoutError:
-            # Clean up temp directory if timed out
-            shutil.rmtree(tmp_dir, ignore_errors=True)
             raise TimeoutError(f"PDF processing timed out after {timeout_seconds} seconds")
     else:
-        # No timeout, just run normally
-        return await loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, tmp_dir, filename))
+        return await loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, **kwargs))
 
 async def handler(event):
+    """Main serverless handler - returns only markdown"""
     try:
-        print(f"Received event: {event}")
-        # Extract base64 encoded file and filename from the event
         input_data = event.get("input", {})
         base64_content = input_data.get("file_content")
         filename = input_data.get("filename")
+        timeout = input_data.get("timeout")
+        created_at = input_data.get("created_at")
+        
+        # Processing options
+        lang = input_data.get("lang", "ch")
+        parse_method = input_data.get("parse_method", "auto")
+        formula_enable = input_data.get("formula_enable", True)
+        table_enable = input_data.get("table_enable", True)
 
-        timeout = input_data.get("timeout", None)
-        created_at = input_data.get("created_at", None)
-
-        # Set default timeout if needed
-        if timeout is not None:
-            # Convert JS timeout value (likely milliseconds) to seconds
+        # Calculate remaining timeout
+        timeout_seconds = None
+        if timeout:
             timeout_seconds = int(timeout) / 1000
-            
-            if created_at is not None:
-                # Calculate elapsed time in seconds
-                # JS timestamps are in milliseconds, convert to seconds
-                created_at_seconds = created_at / 1000
-                current_time = time.time()
-                elapsed_seconds = current_time - created_at_seconds
-                
-                # Check if already timed out
-                if elapsed_seconds >= timeout_seconds:
-                    raise Exception("Request timed out before processing started")
-                
-                # Calculate remaining time for this operation
-                remaining_seconds = max(0, timeout_seconds - elapsed_seconds)
-                print(f"Request age: {elapsed_seconds:.2f}s, Timeout: {timeout_seconds:.2f}s, Remaining: {remaining_seconds:.2f}s")
-                
-                # Use the remaining time as our effective timeout
-                timeout_seconds = remaining_seconds
-            
-            # If timeout is very small, return immediately
-            if timeout_seconds < 1:
-                return {"error": "Insufficient time remaining to process request", "status": "TIMEOUT"}
-        else:
-            timeout_seconds = None  # No timeout specified
+            if created_at:
+                elapsed = time.time() - (created_at / 1000)
+                if elapsed >= timeout_seconds:
+                    return {"error": "Request timed out before processing", "status": "TIMEOUT"}
+                timeout_seconds = max(0, timeout_seconds - elapsed)
+                if timeout_seconds < 1:
+                    return {"error": "Insufficient time remaining", "status": "TIMEOUT"}
 
+        # Validate input
         if not base64_content or not filename:
             return {"error": "Missing file_content or filename", "status": "ERROR"}
 
-        # Decode base64 content
+        if not filename.lower().endswith('.pdf'):
+            return {"error": "Only PDF files supported", "status": "ERROR"}
+
+        # Process PDF
         pdf_bytes = base64.b64decode(base64_content)
+        
+        md_content = await async_convert_to_markdown(
+            pdf_bytes=pdf_bytes,
+            timeout_seconds=timeout_seconds,
+            lang=lang,
+            parse_method=parse_method,
+            formula_enable=formula_enable,
+            table_enable=table_enable
+        )
 
-        # Create unique temporary directory
-        uuid_str = str(uuid4())
-        tmp_dir = _tmp_dir.format(uuid=uuid_str)
-
-        try:
-            # Use the async wrapper with timeout control
-            md_content = await async_convert_to_markdown(
-                pdf_bytes, tmp_dir, filename, timeout_seconds
-            )
-
-            return {"markdown": md_content, "status": "SUCCESS"}
-        except TimeoutError as e:
-            return {"error": str(e), "status": "TIMEOUT"}
-
+        return {"markdown": md_content, "status": "SUCCESS"}
+        
+    except TimeoutError as e:
+        return {"error": str(e), "status": "TIMEOUT"}
     except Exception as e:
-        # Consider more specific error handling/logging
-        print(f"Error in handler: {e}")
         return {"error": str(e), "status": "ERROR"}
-    finally:
-        # Clean up temp directory
-        shutil.rmtree(tmp_dir, ignore_errors=True)
-
-
-
 
 print("Starting RunPod serverless handler...")
-# Runpod will now use the async handler
-runpod.serverless.start({"handler": handler})
-# This line might not be reached in normal serverless operation
-print("RunPod serverless handler finished.") 
+runpod.serverless.start({"handler": handler}) 
