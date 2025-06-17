@@ -38,7 +38,7 @@ ENV PATH="$APP_HOME/.venv/bin:$PATH"
 
 COPY . ./
 
-RUN /bin/bash -c "mineru-models-download -s huggingface -m all"
+RUN /bin/bash -c "mineru-models-download -s huggingface -m pipeline"
 
 # Set the entry point to activate the virtual environment and run the command line tool
 ENTRYPOINT ["/bin/bash", "-c", "export MINERU_MODEL_SOURCE=local && python3 -m app.serverless"]
