@@ -1,34 +1,35 @@
 name: Deploy Image to GHCR
 
 env:
-  DOTNET_VERSION: '6.0.x'
+  DOTNET_VERSION: "6.0.x"
 
 on:
   push:
     branches:
       - main
+      - dev
   workflow_dispatch:
 
 jobs:
-      push-api:
-        runs-on: ubuntu-latest-m
-        defaults:
-          run:
-            working-directory: './'
-        steps:
-          - name: 'Checkout GitHub Action'
-            uses: actions/checkout@main
+  push-api:
+    runs-on: ubuntu-latest-m
+    defaults:
+      run:
+        working-directory: "./"
+    steps:
+      - name: "Checkout GitHub Action"
+        uses: actions/checkout@main
 
-          - name: 'Login to GitHub Container Registry'
-            uses: docker/login-action@v1
-            with:
-              registry: ghcr.io
-              username: ${{github.actor}}
-              password: ${{secrets.GITHUB_TOKEN}}
+      - name: "Login to GitHub Container Registry"
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
 
-          - name: 'Build API Image'
-            run: |
-              docker build . --tag ghcr.io/mendableai/mineru-api:latest
-              docker image ls ghcr.io/mendableai/mineru-api:latest
-              docker history ghcr.io/mendableai/mineru-api:latest
-              docker push ghcr.io/mendableai/mineru-api:latest
+      - name: "Build API Image"
+        run: |
+          docker build . --tag ghcr.io/mendableai/mineru-api:latest
+          docker image ls ghcr.io/mendableai/mineru-api:latest
+          docker history ghcr.io/mendableai/mineru-api:latest
+          docker push ghcr.io/mendableai/mineru-api:latest
