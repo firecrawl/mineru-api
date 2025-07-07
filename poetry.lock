@@ -2191,13 +2191,13 @@ files = [
 
 [[package]]
 name = "mineru"
-version = "2.0.5"
+version = "2.1.0"
 description = "A practical tool for converting PDF to Markdown"
 optional = false
 python-versions = "<3.14,>=3.10"
 groups = ["main"]
 files = [
-    {file = "mineru-2.0.5-py3-none-any.whl", hash = "sha256:167965f69851d9774f51f0b7551abbba42d09555d6425075898794fb3662c00a"},
+    {file = "mineru-2.1.0-py3-none-any.whl", hash = "sha256:31cfd4500869b129785d362ca46d8b281b7533f05ca64a93d772a8a314b15982"},
 ]
 
 [package.dependencies]
@@ -2235,10 +2235,12 @@ ultralytics = {version = ">=8.3.48,<9", optional = true, markers = "extra == \"p
 
 [package.extras]
 all = ["mineru[core]", "mineru[sglang]"]
-core = ["mineru[pipeline]", "mineru[vlm]"]
+api = ["fastapi", "python-multipart", "uvicorn"]
+core = ["mineru[api]", "mineru[gradio]", "mineru[pipeline]", "mineru[vlm]"]
+gradio = ["gradio (>=5.34,<6)", "gradio-pdf (>=0.0.22)"]
 pipeline = ["PyYAML (>=6.0.2,<7)", "dill (>=0.3.8,<1)", "doclayout_yolo (==0.0.4)", "fast-langdetect (>=0.2.3,<0.3.0)", "ftfy (>=6.3.1,<7)", "matplotlib (>=3.10,<4)", "omegaconf (>=2.3.0,<3)", "openai (>=1.70.0,<2)", "pyclipper (>=1.3.0,<2)", "rapid_table (>=1.0.5,<2.0.0)", "shapely (>=2.0.7,<3)", "torch (>=2.2.2,!=2.5.0,!=2.5.1,<3)", "torchvision", "transformers (>=4.49.0,!=4.51.0,<5.0.0)", "ultralytics (>=8.3.48,<9)"]
 pipeline-old-linux = ["PyYAML (==6.0.2)", "albumentations (==1.4.20)", "dill (==0.3.8)", "doclayout_yolo (==0.0.4)", "fast-langdetect (>=0.2.3,<0.3.0)", "ftfy (==6.3.1)", "matplotlib (>=3.10,<=3.10.1)", "omegaconf (==2.3.0)", "openai (==1.71.0)", "pyclipper (==1.3.0.post6)", "rapid_table (==1.0.3)", "shapely (==2.1.0)", "torch (>=2.2.2,!=2.5.0,!=2.5.1,<3)", "torchvision", "transformers (>=4.49.0,!=4.51.0,<5.0.0)", "ultralytics (>=8.3.48,<=8.3.104)"]
-sglang = ["sglang[all] (==0.4.7)"]
+sglang = ["sglang[all] (>=0.4.8,<0.4.9)"]
 vlm = ["accelerate (>=1.5.1)", "pydantic", "torch (>=2.6.0)", "transformers (>=4.51.1)"]
 
 [[package]]
@@ -5903,4 +5905,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "74ff19fe3bd9f84ca4fa581532e4ed267b1cdb88838227c8fbe4041de8595946"
+content-hash = "08b9e8ffef8026991868f6a66949b2c912f4aa3a9ab8ca38b0e7a528c61ad598"
