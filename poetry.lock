@@ -2191,13 +2191,13 @@ files = [
 
 [[package]]
 name = "mineru"
-version = "2.0.5"
+version = "2.1.10"
 description = "A practical tool for converting PDF to Markdown"
 optional = false
 python-versions = "<3.14,>=3.10"
 groups = ["main"]
 files = [
-    {file = "mineru-2.0.5-py3-none-any.whl", hash = "sha256:167965f69851d9774f51f0b7551abbba42d09555d6425075898794fb3662c00a"},
+    {file = "mineru-2.1.10-py3-none-any.whl", hash = "sha256:3a8cc4f821cf61add43cf20107ed9dc17959a38e4c26ccbb205b1167278d69df"},
 ]
 
 [package.dependencies]
@@ -2205,7 +2205,7 @@ boto3 = ">=1.28.43"
 click = ">=8.1.7"
 dill = {version = ">=0.3.8,<1", optional = true, markers = "extra == \"pipeline\""}
 doclayout_yolo = {version = "0.0.4", optional = true, markers = "extra == \"pipeline\""}
-fast-langdetect = {version = ">=0.2.3,<0.3.0", optional = true, markers = "extra == \"pipeline\""}
+fast-langdetect = ">=0.2.3,<0.3.0"
 ftfy = {version = ">=6.3.1,<7", optional = true, markers = "extra == \"pipeline\""}
 httpx = "*"
 huggingface-hub = ">=0.32.4"
@@ -2216,6 +2216,7 @@ modelscope = ">=1.26.0"
 numpy = ">=1.21.6"
 omegaconf = {version = ">=2.3.0,<3", optional = true, markers = "extra == \"pipeline\""}
 openai = {version = ">=1.70.0,<2", optional = true, markers = "extra == \"pipeline\""}
+opencv-python = ">=4.11.0.86"
 "pdfminer.six" = "20250506"
 pdftext = ">=0.6.2"
 pillow = ">=11.0.0"
@@ -2235,10 +2236,13 @@ ultralytics = {version = ">=8.3.48,<9", optional = true, markers = "extra == \"p
 
 [package.extras]
 all = ["mineru[core]", "mineru[sglang]"]
-core = ["mineru[pipeline]", "mineru[vlm]"]
-pipeline = ["PyYAML (>=6.0.2,<7)", "dill (>=0.3.8,<1)", "doclayout_yolo (==0.0.4)", "fast-langdetect (>=0.2.3,<0.3.0)", "ftfy (>=6.3.1,<7)", "matplotlib (>=3.10,<4)", "omegaconf (>=2.3.0,<3)", "openai (>=1.70.0,<2)", "pyclipper (>=1.3.0,<2)", "rapid_table (>=1.0.5,<2.0.0)", "shapely (>=2.0.7,<3)", "torch (>=2.2.2,!=2.5.0,!=2.5.1,<3)", "torchvision", "transformers (>=4.49.0,!=4.51.0,<5.0.0)", "ultralytics (>=8.3.48,<9)"]
-pipeline-old-linux = ["PyYAML (==6.0.2)", "albumentations (==1.4.20)", "dill (==0.3.8)", "doclayout_yolo (==0.0.4)", "fast-langdetect (>=0.2.3,<0.3.0)", "ftfy (==6.3.1)", "matplotlib (>=3.10,<=3.10.1)", "omegaconf (==2.3.0)", "openai (==1.71.0)", "pyclipper (==1.3.0.post6)", "rapid_table (==1.0.3)", "shapely (==2.1.0)", "torch (>=2.2.2,!=2.5.0,!=2.5.1,<3)", "torchvision", "transformers (>=4.49.0,!=4.51.0,<5.0.0)", "ultralytics (>=8.3.48,<=8.3.104)"]
-sglang = ["sglang[all] (==0.4.7)"]
+api = ["fastapi", "python-multipart", "uvicorn"]
+core = ["mineru[api]", "mineru[gradio]", "mineru[pipeline]", "mineru[vlm]"]
+gradio = ["gradio (>=5.34,<6)", "gradio-pdf (>=0.0.22)"]
+pipeline = ["PyYAML (>=6.0.2,<7)", "dill (>=0.3.8,<1)", "doclayout_yolo (==0.0.4)", "ftfy (>=6.3.1,<7)", "matplotlib (>=3.10,<4)", "omegaconf (>=2.3.0,<3)", "openai (>=1.70.0,<2)", "pyclipper (>=1.3.0,<2)", "rapid_table (>=1.0.5,<2.0.0)", "shapely (>=2.0.7,<3)", "torch (>=2.2.2,!=2.5.0,!=2.5.1,<3)", "torchvision", "transformers (>=4.49.0,!=4.51.0,<5.0.0)", "ultralytics (>=8.3.48,<9)"]
+pipeline-old-linux = ["PyYAML (==6.0.2)", "albumentations (==1.4.20)", "dill (==0.3.8)", "doclayout_yolo (==0.0.4)", "ftfy (==6.3.1)", "matplotlib (>=3.10,<=3.10.1)", "omegaconf (==2.3.0)", "openai (==1.71.0)", "pyclipper (==1.3.0.post6)", "rapid_table (==1.0.3)", "shapely (==2.1.0)", "torch (>=2.2.2,!=2.5.0,!=2.5.1,<3)", "torchvision", "transformers (>=4.49.0,!=4.51.0,<5.0.0)", "ultralytics (>=8.3.48,<=8.3.104)"]
+sglang = ["sglang[all] (>=0.4.7,<0.4.10)"]
+test = ["beautifulsoup4", "coverage", "fuzzywuzzy", "mineru[core]", "pytest", "pytest-cov"]
 vlm = ["accelerate (>=1.5.1)", "pydantic", "torch (>=2.6.0)", "transformers (>=4.51.1)"]
 
 [[package]]
@@ -5903,4 +5907,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "74ff19fe3bd9f84ca4fa581532e4ed267b1cdb88838227c8fbe4041de8595946"
+content-hash = "2f12311373511977750f465353c1fca304653ceb4675c18e31da93ed66e3a58a"
