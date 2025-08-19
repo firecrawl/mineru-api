@@ -2191,13 +2191,13 @@ files = [
 
 [[package]]
 name = "mineru"
-version = "2.1.10"
+version = "2.1.11"
 description = "A practical tool for converting PDF to Markdown"
 optional = false
 python-versions = "<3.14,>=3.10"
 groups = ["main"]
 files = [
-    {file = "mineru-2.1.10-py3-none-any.whl", hash = "sha256:3a8cc4f821cf61add43cf20107ed9dc17959a38e4c26ccbb205b1167278d69df"},
+    {file = "mineru-2.1.11-py3-none-any.whl", hash = "sha256:932427484df41fb654528704edad2fdf554b04eca4fd2ff96bc17f23dc0078c4"},
 ]
 
 [package.dependencies]
@@ -5907,4 +5907,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "2f12311373511977750f465353c1fca304653ceb4675c18e31da93ed66e3a58a"
+content-hash = "e94eeda8ed832cef40a99485ef07ba16423dddeca1d1ea4e9e57a5c30d3f9c60"
