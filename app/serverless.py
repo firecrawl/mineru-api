@@ -1,10 +1,9 @@
 import base64
 import os
 import time
-import asyncio
 import tempfile
 import copy
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from concurrent.futures import ProcessPoolExecutor, TimeoutError as FuturesTimeoutError
 
 import runpod
 
@@ -88,14 +87,72 @@ def convert_to_markdown_dispatch(pdf_bytes, **kwargs):
     return convert_to_markdown(pdf_bytes, **kwargs)
 
 
-def convert_to_markdown_with_timeout(pdf_bytes, timeout_seconds=None, **kwargs):
-    """Run conversion in a separate thread with an optional timeout without using signals."""
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(convert_to_markdown_dispatch, pdf_bytes, **kwargs)
+def _convert_entry(args_tuple):
+    """Top-level helper for subprocess execution."""
+    (
+        pdf_bytes,
+        backend_env,
+        server_url,
+        lang,
+        parse_method,
+        formula_enable,
+        table_enable,
+    ) = args_tuple
+    if backend_env:
+        os.environ["MINERU_BACKEND"] = backend_env
+    if server_url:
+        os.environ["MINERU_SGLANG_SERVER_URL"] = server_url
+    return convert_to_markdown_dispatch(
+        pdf_bytes,
+        lang=lang,
+        parse_method=parse_method,
+        formula_enable=formula_enable,
+        table_enable=table_enable,
+    )
+
+
+def convert_to_markdown_with_timeout(
+    pdf_bytes,
+    timeout_seconds=None,
+    *,
+    backend_env: str | None,
+    server_url: str | None,
+    lang: str,
+    parse_method: str,
+    formula_enable: bool,
+    table_enable: bool,
+):
+    """Run conversion in a separate process with an optional timeout.
+    Keeps conversion in the main thread when no timeout is requested.
+    """
+    # If no timeout, run inline in the main process/thread to allow libraries that require main-thread signals.
+    if not timeout_seconds or timeout_seconds <= 0:
+        # Ensure env is applied for inline run as well
+        if backend_env:
+            os.environ["MINERU_BACKEND"] = backend_env
+        if server_url:
+            os.environ["MINERU_SGLANG_SERVER_URL"] = server_url
+        return convert_to_markdown_dispatch(
+            pdf_bytes,
+            lang=lang,
+            parse_method=parse_method,
+            formula_enable=formula_enable,
+            table_enable=table_enable,
+        )
+
+    args_tuple = (
+        pdf_bytes,
+        backend_env,
+        server_url,
+        lang,
+        parse_method,
+        formula_enable,
+        table_enable,
+    )
+    with ProcessPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_convert_entry, args_tuple)
         try:
-            if timeout_seconds and timeout_seconds > 0:
-                return future.result(timeout=timeout_seconds)
-            return future.result()
+            return future.result(timeout=timeout_seconds)
         except FuturesTimeoutError:
             raise TimeoutError(f"PDF processing timed out after {timeout_seconds} seconds")
 
@@ -137,13 +194,19 @@ def handler(event):
         # Process PDF
         pdf_bytes = base64.b64decode(base64_content)
 
+        # Read backend envs once and pass into subprocess when needed
+        backend_env = os.getenv("MINERU_BACKEND", "pipeline").lower()
+        server_url = os.getenv("MINERU_SGLANG_SERVER_URL")
+
         md_content = convert_to_markdown_with_timeout(
             pdf_bytes=pdf_bytes,
             timeout_seconds=timeout_seconds,
+            backend_env=backend_env,
+            server_url=server_url,
             lang=lang,
             parse_method=parse_method,
             formula_enable=formula_enable,
-            table_enable=table_enable
+            table_enable=table_enable,
         )
 
         return {"markdown": md_content, "status": "SUCCESS"}
