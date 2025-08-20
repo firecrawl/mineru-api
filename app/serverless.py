@@ -216,5 +216,6 @@ def handler(event):
     except Exception as e:
         return {"error": str(e), "status": "ERROR"}
 
-print("Starting RunPod serverless handler...")
-runpod.serverless.start({"handler": handler})
+if __name__ == "__main__":
+    print("Starting RunPod serverless handler...")
+    runpod.serverless.start({"handler": handler})
