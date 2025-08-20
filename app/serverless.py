@@ -13,6 +13,8 @@ from mineru.utils.enum_class import MakeMode
 from mineru.backend.pipeline.pipeline_analyze import doc_analyze as pipeline_doc_analyze
 from mineru.backend.pipeline.pipeline_middle_json_mkcontent import union_make as pipeline_union_make
 from mineru.backend.pipeline.model_json_to_middle_json import result_to_middle_json as pipeline_result_to_middle_json
+from mineru.backend.vlm.vlm_analyze import doc_analyze as vlm_doc_analyze
+from mineru.backend.vlm.vlm_middle_json_mkcontent import union_make as vlm_union_make
 
 class TimeoutError(Exception):
     pass
@@ -54,6 +56,36 @@ def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enabl
     except Exception as e:
         raise Exception(f"Error converting PDF to markdown: {str(e)}")
 
+def convert_to_markdown_vlm(pdf_bytes, backend="vlm-sglang-engine", server_url=None):
+    """Convert PDF bytes to markdown using VLM backends; returns markdown string.
+    Only server/engine backend is supported as requested.
+    """
+    # Normalize backend to what vlm_doc_analyze expects
+    normalized_backend = backend[4:] if backend.startswith("vlm-") else backend
+    with tempfile.TemporaryDirectory() as temp_dir:
+        image_writer = FileBasedDataWriter(temp_dir)
+        middle_json, _ = vlm_doc_analyze(
+            pdf_bytes,
+            image_writer=image_writer,
+            backend=normalized_backend,
+            server_url=server_url,
+        )
+        pdf_info = middle_json["pdf_info"]
+        return vlm_union_make(pdf_info, MakeMode.MM_MD, "images")
+
+
+def convert_to_markdown_dispatch(pdf_bytes, **kwargs):
+    """Dispatch to pipeline or VLM engine based on env MINERU_BACKEND.
+    Defaults to pipeline without changing existing behavior.
+    """
+    backend_env = os.getenv("MINERU_BACKEND", "pipeline").lower()
+    if backend_env == "vlm-sglang-engine":
+        # Only support server/engine backend as requested; no client here
+        server_url = os.getenv("MINERU_SGLANG_SERVER_URL")  # optional, generally not needed for engine
+        return convert_to_markdown_vlm(pdf_bytes, backend=backend_env, server_url=server_url)
+    # Fallback to existing pipeline behavior
+    return convert_to_markdown(pdf_bytes, **kwargs)
+
 async def async_convert_to_markdown(pdf_bytes, timeout_seconds=None, **kwargs):
     """Async wrapper with timeout support"""
     loop = asyncio.get_running_loop()
@@ -61,13 +93,13 @@ async def async_convert_to_markdown(pdf_bytes, timeout_seconds=None, **kwargs):
     if timeout_seconds and timeout_seconds > 0:
         try:
             return await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, **kwargs)),
+                loop.run_in_executor(None, lambda: convert_to_markdown_dispatch(pdf_bytes, **kwargs)),
                 timeout=timeout_seconds
             )
         except asyncio.TimeoutError:
             raise TimeoutError(f"PDF processing timed out after {timeout_seconds} seconds")
     else:
-        return await loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, **kwargs))
+        return await loop.run_in_executor(None, lambda: convert_to_markdown_dispatch(pdf_bytes, **kwargs))
 
 async def handler(event):
     """Main serverless handler - returns only markdown"""
@@ -105,7 +137,7 @@ async def handler(event):
 
         # Process PDF
         pdf_bytes = base64.b64decode(base64_content)
-        
+
         md_content = await async_convert_to_markdown(
             pdf_bytes=pdf_bytes,
             timeout_seconds=timeout_seconds,
@@ -123,4 +155,4 @@ async def handler(event):
         return {"error": str(e), "status": "ERROR"}
 
 print("Starting RunPod serverless handler...")
-runpod.serverless.start({"handler": handler}) 
+runpod.serverless.start({"handler": handler})

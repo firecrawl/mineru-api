@@ -1,6 +1,6 @@
 ARG POETRY_VERSION=1.6.1
 
-FROM nvidia/cuda:12.8.1-devel-ubuntu24.04
+FROM lmsysorg/sglang:v0.4.9.post6-cu126
 # Allow statements and log messages to immediately appear in the logs
 ENV PYTHONUNBUFFERED True
 
@@ -9,7 +9,10 @@ RUN apt-get update && apt-get install -y tzdata
 # ENV TZ Asia/Tokyo
 
 RUN apt-get update && \
-    apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3 python3-pip python3-dev && \
+    apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3 python3-pip python3-dev fonts-noto-core \
+    fonts-noto-cjk \
+    fontconfig \
+    libgl1  && \
     rm -rf /var/lib/apt/lists/*
 
 
@@ -38,7 +41,7 @@ ENV PATH="$APP_HOME/.venv/bin:$PATH"
 
 COPY . ./
 
-RUN /bin/bash -c "mineru-models-download -s huggingface -m pipeline"
+RUN /bin/bash -c "mineru-models-download -s huggingface -m all"
 
 # Set the entry point to activate the virtual environment and run the command line tool
 ENTRYPOINT ["/bin/bash", "-c", "export MINERU_MODEL_SOURCE=local && python3 -m app.serverless"]
