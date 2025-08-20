@@ -4,6 +4,7 @@ import time
 import asyncio
 import tempfile
 import copy
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 import runpod
 
@@ -86,23 +87,21 @@ def convert_to_markdown_dispatch(pdf_bytes, **kwargs):
     # Fallback to existing pipeline behavior
     return convert_to_markdown(pdf_bytes, **kwargs)
 
-async def async_convert_to_markdown(pdf_bytes, timeout_seconds=None, **kwargs):
-    """Async wrapper with timeout support"""
-    loop = asyncio.get_running_loop()
-    
-    if timeout_seconds and timeout_seconds > 0:
-        try:
-            return await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: convert_to_markdown_dispatch(pdf_bytes, **kwargs)),
-                timeout=timeout_seconds
-            )
-        except asyncio.TimeoutError:
-            raise TimeoutError(f"PDF processing timed out after {timeout_seconds} seconds")
-    else:
-        return await loop.run_in_executor(None, lambda: convert_to_markdown_dispatch(pdf_bytes, **kwargs))
 
-async def handler(event):
-    """Main serverless handler - returns only markdown"""
+def convert_to_markdown_with_timeout(pdf_bytes, timeout_seconds=None, **kwargs):
+    """Run conversion in a separate thread with an optional timeout without using signals."""
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(convert_to_markdown_dispatch, pdf_bytes, **kwargs)
+        try:
+            if timeout_seconds and timeout_seconds > 0:
+                return future.result(timeout=timeout_seconds)
+            return future.result()
+        except FuturesTimeoutError:
+            raise TimeoutError(f"PDF processing timed out after {timeout_seconds} seconds")
+
+
+def handler(event):
+    """Main serverless handler - returns only markdown (synchronous)."""
     try:
         input_data = event.get("input", {})
         base64_content = input_data.get("file_content")
@@ -138,7 +137,7 @@ async def handler(event):
         # Process PDF
         pdf_bytes = base64.b64decode(base64_content)
 
-        md_content = await async_convert_to_markdown(
+        md_content = convert_to_markdown_with_timeout(
             pdf_bytes=pdf_bytes,
             timeout_seconds=timeout_seconds,
             lang=lang,
