@@ -8,7 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "mineru[pipeline,vlm] (>=2.1.11,<3.0.0)",
+    "mineru[pipeline,vlm,sglang] (>=2.1.11,<3.0.0)",
     "runpod (>=1.7.12,<2.0.0)"
 ]
 
