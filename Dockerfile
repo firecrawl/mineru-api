@@ -22,6 +22,7 @@ COPY pyproject.toml poetry.lock ./
 
 ENV PATH="/root/.local/bin:$PATH"
 RUN poetry config virtualenvs.in-project true && \
+    poetry lock --no-interaction && \
     poetry install --no-interaction --no-root && \
     rm -rf /root/.cache/pypoetry && \
     rm -rf /root/.cache/pip
