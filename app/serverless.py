@@ -4,6 +4,7 @@ import time
 import asyncio
 import tempfile
 import copy
+import io
 
 import runpod
 
@@ -14,13 +15,40 @@ from mineru.backend.pipeline.pipeline_analyze import doc_analyze as pipeline_doc
 from mineru.backend.pipeline.pipeline_middle_json_mkcontent import union_make as pipeline_union_make
 from mineru.backend.pipeline.model_json_to_middle_json import result_to_middle_json as pipeline_result_to_middle_json
 
+from pypdf import PdfReader, PdfWriter
+
 class TimeoutError(Exception):
     pass
 
-def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enable=True, table_enable=True):
+def _trim_pdf_to_max_pages(pdf_bytes: bytes, max_pages: int) -> bytes:
+    """Return a new PDF bytes object with at most the first max_pages pages."""
+    if max_pages is None or max_pages <= 0:
+        return pdf_bytes
+
+    input_buffer = io.BytesIO(pdf_bytes)
+    reader = PdfReader(input_buffer)
+
+    writer = PdfWriter()
+    pages_to_write = min(max_pages, len(reader.pages))
+    for page_index in range(pages_to_write):
+        writer.add_page(reader.pages[page_index])
+
+    output_buffer = io.BytesIO()
+    writer.write(output_buffer)
+    return output_buffer.getvalue()
+
+def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enable=True, table_enable=True, max_pages=None):
     """Convert PDF bytes to markdown - returns only the markdown string"""
     
     try:
+        # Optionally limit to first N pages
+        if max_pages is not None:
+            try:
+                max_pages_int = int(max_pages)
+            except Exception:
+                raise Exception("Invalid max_pages value; must be an integer")
+            pdf_bytes = _trim_pdf_to_max_pages(pdf_bytes, max_pages_int)
+
         # Analyze the PDF
         infer_results, all_image_lists, all_pdf_docs, lang_list_result, ocr_enabled_list = pipeline_doc_analyze(
             [pdf_bytes], 
@@ -77,6 +105,7 @@ async def handler(event):
         filename = input_data.get("filename")
         timeout = input_data.get("timeout")
         created_at = input_data.get("created_at")
+        max_pages = input_data.get("max_pages")
         
         # Processing options
         lang = input_data.get("lang", "en")
@@ -103,6 +132,15 @@ async def handler(event):
         if not filename.lower().endswith('.pdf'):
             return {"error": "Only PDF files supported", "status": "ERROR"}
 
+        # Validate max_pages if provided
+        if max_pages is not None:
+            try:
+                max_pages = int(max_pages)
+                if max_pages <= 0:
+                    return {"error": "max_pages must be a positive integer", "status": "ERROR"}
+            except Exception:
+                return {"error": "Invalid max_pages; must be an integer", "status": "ERROR"}
+
         # Process PDF
         pdf_bytes = base64.b64decode(base64_content)
         
@@ -112,7 +150,8 @@ async def handler(event):
             lang=lang,
             parse_method=parse_method,
             formula_enable=formula_enable,
-            table_enable=table_enable
+            table_enable=table_enable,
+            max_pages=max_pages
         )
 
         return {"markdown": md_content, "status": "SUCCESS"}
