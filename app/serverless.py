@@ -4,6 +4,7 @@ import time
 import tempfile
 import copy
 import io
+import asyncio
 
 import runpod
 
@@ -118,13 +119,101 @@ def convert_to_markdown_vlm(pdf_bytes, backend="vlm-sglang-engine", server_url=N
         return vlm_union_make(pdf_info, MakeMode.MM_MD, "images")
 
 
-def convert_to_markdown_dispatch(pdf_bytes, **kwargs):
-    """Dispatch to pipeline or VLM engine based on env MINERU_BACKEND."""
+def _convert_to_markdown_via_aio(
+    pdf_bytes: bytes,
+    filename: str,
+    *,
+    lang: str = "en",
+    backend: str = "pipeline",
+    parse_method: str = "auto",
+    formula_enable: bool = True,
+    table_enable: bool = True,
+    server_url: str | None = None,
+    max_pages: int | None = None,
+) -> str:
+    """Use MinerU's aio_do_parse to produce markdown and return its content."""
+    # Lazy import to keep module import light
+    from mineru.cli.common import aio_do_parse
+
+    # Map max_pages to end_page_id semantics (inclusive end index)
+    start_page_id = 0
+    end_page_id = None
+    if max_pages is not None:
+        try:
+            max_pages_int = int(max_pages)
+            if max_pages_int > 0:
+                end_page_id = max_pages_int - 1
+        except Exception:
+            raise Exception("Invalid max_pages value; must be an integer")
+
+    with tempfile.TemporaryDirectory() as output_dir:
+        # Run async parse
+        async def _run():
+            await aio_do_parse(
+                output_dir=output_dir,
+                pdf_file_names=[filename],
+                pdf_bytes_list=[pdf_bytes],
+                p_lang_list=[lang],
+                backend=backend,
+                parse_method=parse_method,
+                formula_enable=formula_enable,
+                table_enable=table_enable,
+                server_url=server_url,
+                f_draw_layout_bbox=False,
+                f_draw_span_bbox=False,
+                f_dump_md=True,
+                f_dump_middle_json=False,
+                f_dump_model_output=False,
+                f_dump_orig_pdf=False,
+                f_dump_content_list=False,
+                start_page_id=start_page_id,
+                end_page_id=end_page_id,
+            )
+
+        asyncio.run(_run())
+
+        # Locate markdown file
+        parse_subdir = parse_method if backend.startswith("pipeline") else "vlm"
+        parse_dir = os.path.join(output_dir, filename, parse_subdir)
+        md_path = os.path.join(parse_dir, f"{filename}.md")
+        if not os.path.exists(md_path):
+            raise Exception("Markdown output not found after parsing")
+        with open(md_path, "r", encoding="utf-8") as f:
+            return f.read()
+
+
+def convert_to_markdown_dispatch(pdf_bytes, filename=None, **kwargs):
+    """Dispatch to pipeline or VLM engine based on env MINERU_BACKEND.
+
+    Prefer using aio_do_parse to match official MinerU entrypoints.
+    """
     backend_env = os.getenv("MINERU_BACKEND", "pipeline").lower()
-    if backend_env == "vlm-sglang-engine":
-        server_url = os.getenv("MINERU_SGLANG_SERVER_URL")
-        return convert_to_markdown_vlm(pdf_bytes, backend=backend_env, server_url=server_url)
-    return convert_to_markdown(pdf_bytes, **kwargs)
+    server_url = os.getenv("MINERU_SGLANG_SERVER_URL")
+    lang = kwargs.get("lang", "en")
+    parse_method = kwargs.get("parse_method", "auto")
+    formula_enable = kwargs.get("formula_enable", True)
+    table_enable = kwargs.get("table_enable", True)
+    max_pages = kwargs.get("max_pages")
+
+    if filename is None:
+        filename = "document"
+
+    # Use aio_do_parse path for both pipeline and vlm backends
+    if backend_env.startswith("vlm"):
+        parse_method = "vlm"
+    backend_for_aio = backend_env
+    return _convert_to_markdown_via_aio(
+        pdf_bytes,
+        filename,
+        lang=lang,
+        backend=backend_for_aio,
+        parse_method=parse_method,
+        formula_enable=formula_enable,
+        table_enable=table_enable,
+        server_url=server_url,
+        max_pages=max_pages,
+    )
+
 
 
 def handler(event):
@@ -163,6 +252,7 @@ def handler(event):
 
         md_content = convert_to_markdown_dispatch(
             pdf_bytes=pdf_bytes,
+            filename=os.path.splitext(os.path.basename(filename))[0] if filename else "document",
             lang=lang,
             parse_method=parse_method,
             formula_enable=formula_enable,
