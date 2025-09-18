@@ -10,6 +10,35 @@ import runpod
 
 from pypdf import PdfReader, PdfWriter
 
+# # Ensure MinerU custom HF classes are available and optionally pre-initialize sglang engine
+# try:
+#     # Importing registers custom model types and/or enables custom code for AutoConfig
+#     from mineru.backend.vlm.hf_predictor import HuggingfacePredictor  # noqa: F401
+# except Exception:
+#     pass
+# try:
+#     from mineru.backend.vlm.predictor import get_predictor  # noqa: F401
+# except Exception:
+#     pass
+
+def _maybe_init_sglang_engine_in_main() -> None:
+    """Initialize sglang engine in the main process if requested via env.
+
+    Per MinerU guidance, sglang-engine must be initialized in the main process.
+    This avoids scheduler failures when workers spawn without prior initialization.
+    """
+    backend_env = os.getenv("MINERU_BACKEND", "pipeline").lower()
+    if backend_env == "vlm-sglang-engine":
+        try:
+            from mineru.backend.vlm.vlm_analyze import ModelSingleton
+            # Initialize once; ModelSingleton handles idempotency
+            ModelSingleton().get_model("sglang-engine", None, None)
+        except Exception:
+            # Defer detailed errors to runtime path to avoid import-time crashes
+            pass
+
+_maybe_init_sglang_engine_in_main()
+
 class TimeoutError(Exception):
     pass
 
