@@ -119,7 +119,7 @@ def convert_to_markdown_vlm(pdf_bytes, backend="vlm-sglang-engine", server_url=N
         return vlm_union_make(pdf_info, MakeMode.MM_MD, "images")
 
 
-def _convert_to_markdown_via_aio(
+async def _convert_to_markdown_via_aio(
     pdf_bytes: bytes,
     filename: str,
     *,
@@ -147,30 +147,26 @@ def _convert_to_markdown_via_aio(
             raise Exception("Invalid max_pages value; must be an integer")
 
     with tempfile.TemporaryDirectory() as output_dir:
-        # Run async parse
-        async def _run():
-            await aio_do_parse(
-                output_dir=output_dir,
-                pdf_file_names=[filename],
-                pdf_bytes_list=[pdf_bytes],
-                p_lang_list=[lang],
-                backend=backend,
-                parse_method=parse_method,
-                formula_enable=formula_enable,
-                table_enable=table_enable,
-                server_url=server_url,
-                f_draw_layout_bbox=False,
-                f_draw_span_bbox=False,
-                f_dump_md=True,
-                f_dump_middle_json=False,
-                f_dump_model_output=False,
-                f_dump_orig_pdf=False,
-                f_dump_content_list=False,
-                start_page_id=start_page_id,
-                end_page_id=end_page_id,
-            )
-
-        asyncio.run(_run())
+        await aio_do_parse(
+            output_dir=output_dir,
+            pdf_file_names=[filename],
+            pdf_bytes_list=[pdf_bytes],
+            p_lang_list=[lang],
+            backend=backend,
+            parse_method=parse_method,
+            formula_enable=formula_enable,
+            table_enable=table_enable,
+            server_url=server_url,
+            f_draw_layout_bbox=False,
+            f_draw_span_bbox=False,
+            f_dump_md=True,
+            f_dump_middle_json=False,
+            f_dump_model_output=False,
+            f_dump_orig_pdf=False,
+            f_dump_content_list=False,
+            start_page_id=start_page_id,
+            end_page_id=end_page_id,
+        )
 
         # Locate markdown file
         parse_subdir = parse_method if backend.startswith("pipeline") else "vlm"
@@ -182,7 +178,7 @@ def _convert_to_markdown_via_aio(
             return f.read()
 
 
-def convert_to_markdown_dispatch(pdf_bytes, filename=None, **kwargs):
+async def convert_to_markdown_dispatch(pdf_bytes, filename=None, **kwargs):
     """Dispatch to pipeline or VLM engine based on env MINERU_BACKEND.
 
     Prefer using aio_do_parse to match official MinerU entrypoints.
@@ -202,7 +198,7 @@ def convert_to_markdown_dispatch(pdf_bytes, filename=None, **kwargs):
     if backend_env.startswith("vlm"):
         parse_method = "vlm"
     backend_for_aio = backend_env
-    return _convert_to_markdown_via_aio(
+    return await _convert_to_markdown_via_aio(
         pdf_bytes,
         filename,
         lang=lang,
@@ -216,7 +212,7 @@ def convert_to_markdown_dispatch(pdf_bytes, filename=None, **kwargs):
 
 
 
-def handler(event):
+async def handler(event):
     try:
         input_data = event.get("input", {})
         base64_content = input_data.get("file_content")
@@ -250,7 +246,7 @@ def handler(event):
         # Process PDF
         pdf_bytes = base64.b64decode(base64_content)
 
-        md_content = convert_to_markdown_dispatch(
+        md_content = await convert_to_markdown_dispatch(
             pdf_bytes=pdf_bytes,
             filename=os.path.splitext(os.path.basename(filename))[0] if filename else "document",
             lang=lang,
