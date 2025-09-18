@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - dev
+      - feat/vlm
   workflow_dispatch:
 
 jobs:
