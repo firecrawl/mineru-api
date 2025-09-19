@@ -1,6 +1,6 @@
 ARG POETRY_VERSION=1.6.1
 
-FROM lmsysorg/sglang:v0.4.9.post6-cu126
+FROM vllm/vllm-openai:v0.10.1.1
 # Allow statements and log messages to immediately appear in the logs
 ENV PYTHONUNBUFFERED True
 

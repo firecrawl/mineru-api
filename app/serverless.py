@@ -22,23 +22,25 @@ from pypdf import PdfReader, PdfWriter
 # except Exception:
 #     pass
 
-def _maybe_init_sglang_engine_in_main() -> None:
-    """Initialize sglang engine in the main process if requested via env.
+def _maybe_init_engine_in_main() -> None:
+    """Initialize VLM engine in the main process if requested via env.
 
     Per MinerU guidance, sglang-engine must be initialized in the main process.
     This avoids scheduler failures when workers spawn without prior initialization.
     """
     backend_env = os.getenv("MINERU_BACKEND", "pipeline").lower()
-    if backend_env == "vlm-sglang-engine":
-        try:
-            from mineru.backend.vlm.vlm_analyze import ModelSingleton
-            # Initialize once; ModelSingleton handles idempotency
-            ModelSingleton().get_model("sglang-engine", None, None)
-        except Exception:
-            # Defer detailed errors to runtime path to avoid import-time crashes
-            pass
+    from mineru.backend.vlm.vlm_analyze import ModelSingleton
 
-_maybe_init_sglang_engine_in_main()
+
+    try:
+
+        if backend_env == "vlm-vllm-async-engine":
+            ModelSingleton().get_model("vllm-async-engine", None, None)
+    except Exception:
+        # Defer detailed errors to runtime path to avoid import-time crashes
+        pass
+
+_maybe_init_engine_in_main()
 
 class TimeoutError(Exception):
     pass
@@ -184,7 +186,7 @@ async def convert_to_markdown_dispatch(pdf_bytes, filename=None, **kwargs):
     Prefer using aio_do_parse to match official MinerU entrypoints.
     """
     backend_env = os.getenv("MINERU_BACKEND", "pipeline").lower()
-    server_url = os.getenv("MINERU_SGLANG_SERVER_URL")
+    server_url = os.getenv("MINERU_VLM_SERVER_URL") or os.getenv("MINERU_SGLANG_SERVER_URL")
     lang = kwargs.get("lang", "en")
     parse_method = kwargs.get("parse_method", "auto")
     formula_enable = kwargs.get("formula_enable", True)
