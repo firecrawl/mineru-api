@@ -1,14 +1,16 @@
 --- original.py	2025-12-03 21:01:21.371655371 +0200
-+++ patched.py	2025-12-03 21:01:26.371447811 +0200
-@@ -173,6 +173,8 @@
++++ patched.py	2025-12-03 21:36:00.391574912 +0200
+@@ -173,7 +173,9 @@
              ) from e
  
      gpu_memory = get_vram(device)
+-    if gpu_memory >= 16:
 +    if gpu_memory >= 22: 
 +        batch_ratio = 32
-     if gpu_memory >= 16:
++    elif gpu_memory >= 16:
          batch_ratio = 16
      elif gpu_memory >= 12:
+         batch_ratio = 8
 @@ -188,14 +190,15 @@
              f'You can set MINERU_VIRTUAL_VRAM_SIZE environment variable to adjust GPU memory allocation.'
      )
