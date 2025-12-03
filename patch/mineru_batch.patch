@@ -1,0 +1,26 @@
+--- original.py	2025-12-03 19:45:52.986082434 +0200
++++ patched.py	2025-12-03 19:43:53.209388811 +0200
+@@ -188,14 +188,15 @@
+             f'You can set MINERU_VIRTUAL_VRAM_SIZE environment variable to adjust GPU memory allocation.'
+     )
+ 
+-    # 检测torch的版本号
+-    import torch
+-    from packaging import version
+-    if version.parse(torch.__version__) >= version.parse("2.8.0") or str(device).startswith('mps'):
+-        enable_ocr_det_batch = False
+-    else:
+-        enable_ocr_det_batch = True
+-
++    # # 检测torch的版本号
++    # import torch
++    # from packaging import version
++    # if version.parse(torch.__version__) >= version.parse("2.8.0") or str(device).startswith('mps'):
++    #     enable_ocr_det_batch = False
++    # else:
++    #     enable_ocr_det_batch = True
++    enable_ocr_det_batch = True
++    print(f"enable_ocr_det_batch: {enable_ocr_det_batch}")
+     batch_model = BatchAnalyze(model_manager, batch_ratio, formula_enable, table_enable, enable_ocr_det_batch)
+     results = batch_model(images_with_extra_info)
+ 
