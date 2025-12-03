@@ -161,5 +161,22 @@ async def handler(event):
     except Exception as e:
         return {"error": str(e), "status": "ERROR"}
 
-print("Starting RunPod serverless handler...")
-runpod.serverless.start({"handler": handler}) 
+if __name__ == "__main__":
+    if os.environ.get("DEBUG_SERVER", "false").lower() == "true":
+        import uvicorn
+        from fastapi import FastAPI, Request
+        
+        app = FastAPI()
+        
+        @app.post("/run")
+        async def debug_endpoint(request: Request):
+            input_data = await request.json()
+            # Simulate RunPod event structure
+            event = {"input": input_data}
+            return await handler(event)
+            
+        print("Starting Debug Server on port 8000...")
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    else:
+        print("Starting RunPod serverless handler...")
+        runpod.serverless.start({"handler": handler}) 
