@@ -28,8 +28,8 @@ RUN poetry config virtualenvs.in-project true && \
     rm -rf /root/.cache/pip
 
 # Patch mineru to support batch?
-COPY patch/mineru_batch.patch /tmp/mineru_batch.patch
-RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_analyze.py < /tmp/mineru_batch.patch
+#COPY patch/mineru_batch.patch /tmp/mineru_batch.patch
+#RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_analyze.py < /tmp/mineru_batch.patch
 # Add the virtual environment's bin directory to PATH
 ENV PATH="$APP_HOME/.venv/bin:$PATH"
 

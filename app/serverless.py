@@ -14,6 +14,7 @@ from mineru.utils.enum_class import MakeMode
 from mineru.backend.pipeline.pipeline_analyze import doc_analyze as pipeline_doc_analyze
 from mineru.backend.pipeline.pipeline_middle_json_mkcontent import union_make as pipeline_union_make
 from mineru.backend.pipeline.model_json_to_middle_json import result_to_middle_json as pipeline_result_to_middle_json
+from mineru.backend.pipeline.pipeline_analyze import ModelSingleton
 
 from pypdf import PdfReader, PdfWriter
 
@@ -179,4 +180,12 @@ if __name__ == "__main__":
         uvicorn.run(app, host="0.0.0.0", port=8000)
     else:
         print("Starting RunPod serverless handler...")
+        logger.info("Warming up pipeline models...")
+        ModelSingleton().get_model(
+            lang="en", 
+            formula_enable=True,
+            table_enable=True
+        )
+        logger.info("Pipeline models warmed up")
+
         runpod.serverless.start({"handler": handler}) 
