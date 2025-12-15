@@ -14,6 +14,7 @@ from mineru.utils.enum_class import MakeMode
 from mineru.backend.pipeline.pipeline_analyze import doc_analyze as pipeline_doc_analyze
 from mineru.backend.pipeline.pipeline_middle_json_mkcontent import union_make as pipeline_union_make
 from mineru.backend.pipeline.model_json_to_middle_json import result_to_middle_json as pipeline_result_to_middle_json
+from mineru.backend.pipeline.pipeline_analyze import ModelSingleton
 
 from pypdf import PdfReader, PdfWriter
 
@@ -161,5 +162,30 @@ async def handler(event):
     except Exception as e:
         return {"error": str(e), "status": "ERROR"}
 
-print("Starting RunPod serverless handler...")
-runpod.serverless.start({"handler": handler}) 
+if __name__ == "__main__":
+    if os.environ.get("DEBUG_SERVER", "false").lower() == "true":
+        import uvicorn
+        from fastapi import FastAPI, Request
+        
+        app = FastAPI()
+        
+        @app.post("/run")
+        async def debug_endpoint(request: Request):
+            input_data = await request.json()
+            # Simulate RunPod event structure
+            event = {"input": input_data}
+            return await handler(event)
+            
+        print("Starting Debug Server on port 8000...")
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    else:
+        print("Starting RunPod serverless handler...")
+        print("Warming up pipeline models...")
+        ModelSingleton().get_model(
+            lang="en", 
+            formula_enable=True,
+            table_enable=True
+        )
+        print("Pipeline models warmed up")
+
+        runpod.serverless.start({"handler": handler}) 

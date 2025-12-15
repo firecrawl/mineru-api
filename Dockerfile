@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y tzdata
 # ENV TZ Asia/Tokyo
 
 RUN apt-get update && \
-    apt-get install --yes --no-install-recommends curl g++ libopencv-dev python3 python3-pip python3-dev && \
+    apt-get install --yes --no-install-recommends patch curl g++ libopencv-dev python3 python3-pip python3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 
@@ -27,6 +27,9 @@ RUN poetry config virtualenvs.in-project true && \
     rm -rf /root/.cache/pypoetry && \
     rm -rf /root/.cache/pip
 
+# Patch mineru to support batch?
+#COPY patch/mineru_batch.patch /tmp/mineru_batch.patch
+#RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_analyze.py < /tmp/mineru_batch.patch
 # Add the virtual environment's bin directory to PATH
 ENV PATH="$APP_HOME/.venv/bin:$PATH"
 
