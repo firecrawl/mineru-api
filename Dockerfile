@@ -27,11 +27,16 @@ RUN poetry config virtualenvs.in-project true && \
     rm -rf /root/.cache/pypoetry && \
     rm -rf /root/.cache/pip
 
-# Patch mineru to support batch?
-#COPY patch/mineru_batch.patch /tmp/mineru_batch.patch
-#RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_analyze.py < /tmp/mineru_batch.patch
+# Patch mineru to support batch
+COPY patch/mineru_batch.patch /tmp/mineru_batch.patch
+RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_analyze.py < /tmp/mineru_batch.patch
 # Add the virtual environment's bin directory to PATH
 ENV PATH="$APP_HOME/.venv/bin:$PATH"
+
+# GPU/runtime performance tuning
+ENV MINERU_VIRTUAL_VRAM_SIZE=24
+ENV MINERU_PDF_RENDER_THREADS=8
+ENV OMP_NUM_THREADS=8
 
 #use paddlegpu
 # RUN pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
