@@ -65,6 +65,7 @@ def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enabl
         model_list = infer_results[0]
         images_list = all_image_lists[0]
         pdf_doc = all_pdf_docs[0]
+        page_count = len(pdf_doc)
         _lang = lang_list_result[0]
         _ocr_enable = ocr_enabled_list[0]
 
@@ -84,7 +85,7 @@ def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enabl
 
             processing_time_ms = round((time.time() - start_time) * 1000)
             metadata = {
-                "pages": len(pdf_doc),
+                "pages": page_count,
                 "ocr": _ocr_enable,
                 "processing_time_ms": processing_time_ms,
             }
@@ -180,13 +181,17 @@ if __name__ == "__main__":
         
         app = FastAPI()
         
+        @app.get("/health")
+        async def health():
+            return {"status": "ok"}
+
         @app.post("/run")
         async def debug_endpoint(request: Request):
             input_data = await request.json()
             # Simulate RunPod event structure
             event = {"input": input_data}
             return await handler(event)
-            
+
         print("Starting Debug Server on port 8000...")
         uvicorn.run(app, host="0.0.0.0", port=8000)
     else:
