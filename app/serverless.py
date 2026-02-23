@@ -19,7 +19,7 @@ from mineru.backend.pipeline.pipeline_analyze import ModelSingleton
 from pypdf import PdfReader, PdfWriter
 from pypdfium2._helpers.misc import PdfiumError
 
-from app.warmup import create_warmup_pdf
+from app.warmup import create_warmup_pdf, warmup_ocr_det_shapes
 
 class TimeoutError(Exception):
     pass
@@ -236,6 +236,7 @@ if __name__ == "__main__":
     )
     print("Pipeline models warmed up")
     _warmup_with_inference()
+    warmup_ocr_det_shapes(lang="en")
 
     if os.environ.get("DEBUG_SERVER", "false").lower() == "true":
         import uvicorn

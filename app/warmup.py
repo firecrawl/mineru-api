@@ -1,14 +1,75 @@
-"""Synthetic PDF generation for CUDA kernel warm-up.
+"""Warm-up utilities for CUDA kernel pre-compilation.
 
 OCR-det groups detected text regions by their padded resolution (64-pixel
 boundaries).  Each unique (height, width) pair triggers a CUDA kernel
-compilation (~2 s per shape on first encounter).  The functions here build
-a multi-page PDF with deliberately diverse layouts so the layout model
-detects many separate regions of varied bounding-box sizes, pre-compiling
-kernels for the most common shapes before real traffic arrives.
+compilation (~2 s per shape on first encounter).
+
+Two warm-up strategies are provided:
+
+1. **Synthetic PDF inference** (`create_warmup_pdf`) — runs the full pipeline
+   to warm Layout, MFD, MFR, Table, and OCR models.  However, the OCR-det
+   resolution groups produced by synthetic text rarely overlap with those
+   from real-world PDFs.
+
+2. **Direct OCR-det tensor warm-up** (`warmup_ocr_det_shapes`) — feeds dummy
+   images at every common 64-px-padded resolution directly into the OCR-det
+   model, guaranteeing kernel coverage regardless of document content.
 """
 
 import io
+import time
+
+
+def warmup_ocr_det_shapes(lang="en"):
+    """Pre-compile CUDA kernels for OCR-det across all common input resolutions.
+
+    The synthetic PDF warm-up produces OCR-det resolution groups that don't
+    overlap with real documents (observed: 28 warm-up shapes vs 37 production
+    shapes with zero overlap).  This function bypasses the PDF pipeline and
+    feeds dummy images directly into the OCR-det model at every 64-px-padded
+    resolution in the typical text-region range.
+
+    Grid: heights 64-512 (8 values) x widths 64-1280 (20 values) = 160 shapes.
+    Shapes already compiled by the PDF warm-up run in ~0.02 s each (cached).
+    New shapes compile at ~2 s each.  Typical additional time: 2-4 minutes.
+    """
+    import numpy as np
+    from mineru.backend.pipeline.model_init import AtomModelSingleton
+    from mineru.backend.pipeline.model_list import AtomicModel
+
+    atom_model_manager = AtomModelSingleton()
+    ocr_model = atom_model_manager.get_atom_model(
+        atom_model_name=AtomicModel.OCR,
+        det_db_box_thresh=0.3,
+        lang=lang,
+    )
+    text_detector = ocr_model.text_detector
+
+    # Build grid: every 64-px multiple in the common text-region range.
+    # Heights 64-512 cover single lines through large paragraphs.
+    # Widths 64-1280 cover narrow labels through full page-width blocks.
+    shapes = [
+        (h, w)
+        for h in range(64, 513, 64)
+        for w in range(64, 1281, 64)
+    ]
+
+    total = len(shapes)
+    print(f"Pre-compiling OCR-det CUDA kernels for {total} resolution shapes...")
+    start = time.time()
+
+    for i, (h, w) in enumerate(shapes):
+        dummy = np.ones((h, w, 3), dtype=np.uint8) * 255
+        try:
+            text_detector.batch_predict([dummy], 1)
+        except Exception:
+            pass
+        if (i + 1) % 40 == 0:
+            elapsed = round(time.time() - start, 1)
+            print(f"  OCR-det warmup: {i + 1}/{total} shapes ({elapsed}s)")
+
+    elapsed = round(time.time() - start, 1)
+    print(f"OCR-det kernel pre-compilation complete: {total} shapes in {elapsed}s")
 
 
 def _make_page_ops(page_idx):
