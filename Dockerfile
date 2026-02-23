@@ -33,8 +33,7 @@ RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_ana
 # Add the virtual environment's bin directory to PATH
 ENV PATH="$APP_HOME/.venv/bin:$PATH"
 
-# GPU/runtime performance tuning
-ENV MINERU_VIRTUAL_VRAM_SIZE=24
+# GPU/runtime performance tuning (VRAM auto-detected from GPU at runtime)
 ENV MINERU_PDF_RENDER_THREADS=8
 ENV OMP_NUM_THREADS=8
 

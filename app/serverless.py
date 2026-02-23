@@ -19,6 +19,8 @@ from mineru.backend.pipeline.pipeline_analyze import ModelSingleton
 from pypdf import PdfReader, PdfWriter
 from pypdfium2._helpers.misc import PdfiumError
 
+from app.warmup import create_warmup_pdf
+
 class TimeoutError(Exception):
     pass
 
@@ -53,93 +55,6 @@ def _repair_pdf(pdf_bytes: bytes) -> bytes:
         # If repair itself fails, return original bytes and let the pipeline report the error
         return pdf_bytes
 
-def _create_warmup_pdf(num_pages=4):
-    """Create a synthetic multi-page PDF with dense text for CUDA kernel warm-up.
-
-    Generates pages with many text lines at varied font sizes so the layout model
-    detects numerous text regions, forcing OCR-det to process diverse tensor shapes
-    and pre-compile CUDA kernels for them.
-    """
-    page_obj_nums = []
-    page_content_pairs = []
-    obj_num = 4  # 1=Catalog, 2=Pages, 3=Font
-
-    for p in range(num_pages):
-        ops = ["BT"]
-        y = 760
-        for i in range(40):
-            size = 8 + (i % 5) * 2  # cycle 8, 10, 12, 14, 16 pt
-            x = 40 + (i % 3) * 10
-            text = f"P{p+1} L{i+1} The quick brown fox jumps over the lazy dog 0123456789"
-            ops.append(f"/F1 {size} Tf 1 0 0 1 {x} {y} Tm ({text}) Tj")
-            y -= size + 3
-            if y < 40:
-                break
-        ops.append("ET")
-        content_bytes = "\n".join(ops).encode("latin-1")
-
-        content_obj_num = obj_num
-        page_obj_num = obj_num + 1
-        page_content_pairs.append((content_obj_num, page_obj_num, content_bytes))
-        page_obj_nums.append(page_obj_num)
-        obj_num += 2
-
-    total_objs = obj_num
-    buf = io.BytesIO()
-    offsets = {}
-
-    def write(data):
-        if isinstance(data, str):
-            data = data.encode()
-        buf.write(data)
-
-    def start_obj(num):
-        offsets[num] = buf.tell()
-        write(f"{num} 0 obj\n")
-
-    def end_obj():
-        write(b"endobj\n")
-
-    write(b"%PDF-1.4\n")
-
-    start_obj(1)
-    write(b"<</Type/Catalog/Pages 2 0 R>>\n")
-    end_obj()
-
-    kids = " ".join(f"{n} 0 R" for n in page_obj_nums)
-    start_obj(2)
-    write(f"<</Type/Pages/Kids[{kids}]/Count {num_pages}>>\n")
-    end_obj()
-
-    start_obj(3)
-    write(b"<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>\n")
-    end_obj()
-
-    for content_obj_num, page_obj_num, content_bytes in page_content_pairs:
-        start_obj(content_obj_num)
-        write(f"<</Length {len(content_bytes)}>>\nstream\n")
-        buf.write(content_bytes)
-        write(b"\nendstream\n")
-        end_obj()
-
-        start_obj(page_obj_num)
-        write(f"<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]"
-              f"/Contents {content_obj_num} 0 R"
-              f"/Resources<</Font<</F1 3 0 R>>>>>>\n")
-        end_obj()
-
-    xref_offset = buf.tell()
-    write(f"xref\n0 {total_objs}\n")
-    write(b"0000000000 65535 f \r\n")
-    for i in range(1, total_objs):
-        write(f"{offsets[i]:010d} 00000 n \r\n")
-
-    write(f"trailer<</Size {total_objs}/Root 1 0 R>>\n"
-          f"startxref\n{xref_offset}\n%%EOF\n")
-
-    return buf.getvalue()
-
-
 def _warmup_with_inference():
     """Run a full inference pass on a synthetic PDF to pre-compile CUDA kernels.
 
@@ -150,7 +65,7 @@ def _warmup_with_inference():
     """
     print("Running warm-up inference to pre-compile CUDA kernels...")
     start = time.time()
-    pdf_bytes = _create_warmup_pdf(num_pages=4)
+    pdf_bytes = create_warmup_pdf(num_pages=8)
     try:
         _do_convert(
             pdf_bytes, lang="en", parse_method="ocr",
