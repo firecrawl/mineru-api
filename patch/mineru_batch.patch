@@ -14,7 +14,9 @@
  
      gpu_memory = get_vram(device)
 -    if gpu_memory >= 16:
-+    if gpu_memory >= 22:
++    if gpu_memory >= 40:
++        batch_ratio = 48
++    elif gpu_memory >= 22:
 +        batch_ratio = 32
 +    elif gpu_memory >= 16:
          batch_ratio = 16
