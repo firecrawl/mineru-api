@@ -9,7 +9,7 @@
  class ModelSingleton:
      _instance = None
      _models = {}
-@@ -176,7 +178,9 @@
+@@ -176,7 +178,11 @@
              ) from e
  
      gpu_memory = get_vram(device)
