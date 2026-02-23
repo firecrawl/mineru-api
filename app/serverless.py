@@ -17,6 +17,7 @@ from mineru.backend.pipeline.model_json_to_middle_json import result_to_middle_j
 from mineru.backend.pipeline.pipeline_analyze import ModelSingleton
 
 from pypdf import PdfReader, PdfWriter
+from pypdfium2._helpers.misc import PdfiumError
 
 class TimeoutError(Exception):
     pass
@@ -38,61 +39,86 @@ def _trim_pdf_to_max_pages(pdf_bytes: bytes, max_pages: int) -> bytes:
     writer.write(output_buffer)
     return output_buffer.getvalue()
 
+def _repair_pdf(pdf_bytes: bytes) -> bytes:
+    """Re-write the PDF through pypdf to fix structural issues (e.g. broken xref tables)."""
+    try:
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        writer = PdfWriter()
+        for page in reader.pages:
+            writer.add_page(page)
+        output = io.BytesIO()
+        writer.write(output)
+        return output.getvalue()
+    except Exception:
+        # If repair itself fails, return original bytes and let the pipeline report the error
+        return pdf_bytes
+
+def _do_convert(pdf_bytes, lang, parse_method, formula_enable, table_enable, max_pages, start_time):
+    """Core conversion logic — separated so convert_to_markdown can retry with repaired bytes."""
+    # Optionally limit to first N pages
+    if max_pages is not None:
+        try:
+            max_pages_int = int(max_pages)
+        except Exception:
+            raise Exception("Invalid max_pages value; must be an integer")
+        pdf_bytes = _trim_pdf_to_max_pages(pdf_bytes, max_pages_int)
+
+    # Analyze the PDF
+    infer_results, all_image_lists, all_pdf_docs, lang_list_result, ocr_enabled_list = pipeline_doc_analyze(
+        [pdf_bytes],
+        [lang],
+        parse_method=parse_method,
+        formula_enable=formula_enable,
+        table_enable=table_enable
+    )
+
+    # Process results
+    model_list = infer_results[0]
+    images_list = all_image_lists[0]
+    pdf_doc = all_pdf_docs[0]
+    page_count = len(pdf_doc)
+    _lang = lang_list_result[0]
+    _ocr_enable = ocr_enabled_list[0]
+
+    # Create temporary image directory for any image processing
+    with tempfile.TemporaryDirectory() as temp_dir:
+        image_writer = FileBasedDataWriter(temp_dir)
+
+        # Convert to middle JSON format
+        middle_json = pipeline_result_to_middle_json(
+            model_list, images_list, pdf_doc, image_writer,
+            _lang, _ocr_enable, formula_enable
+        )
+
+        # Generate markdown
+        pdf_info = middle_json["pdf_info"]
+        md_content = pipeline_union_make(pdf_info, MakeMode.MM_MD, "images")
+
+        processing_time_ms = round((time.time() - start_time) * 1000)
+        metadata = {
+            "pages": page_count,
+            "ocr": _ocr_enable,
+            "processing_time_ms": processing_time_ms,
+        }
+        return md_content, metadata
+
 def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enable=True, table_enable=True, max_pages=None):
     """Convert PDF bytes to markdown - returns the markdown string and processing metadata"""
 
+    start_time = time.time()
     try:
-        start_time = time.time()
-
-        # Optionally limit to first N pages
-        if max_pages is not None:
-            try:
-                max_pages_int = int(max_pages)
-            except Exception:
-                raise Exception("Invalid max_pages value; must be an integer")
-            pdf_bytes = _trim_pdf_to_max_pages(pdf_bytes, max_pages_int)
-
-        # Analyze the PDF
-        infer_results, all_image_lists, all_pdf_docs, lang_list_result, ocr_enabled_list = pipeline_doc_analyze(
-            [pdf_bytes],
-            [lang],
-            parse_method=parse_method,
-            formula_enable=formula_enable,
-            table_enable=table_enable
-        )
-
-        # Process results
-        model_list = infer_results[0]
-        images_list = all_image_lists[0]
-        pdf_doc = all_pdf_docs[0]
-        page_count = len(pdf_doc)
-        _lang = lang_list_result[0]
-        _ocr_enable = ocr_enabled_list[0]
-
-        # Create temporary image directory for any image processing
-        with tempfile.TemporaryDirectory() as temp_dir:
-            image_writer = FileBasedDataWriter(temp_dir)
-
-            # Convert to middle JSON format
-            middle_json = pipeline_result_to_middle_json(
-                model_list, images_list, pdf_doc, image_writer,
-                _lang, _ocr_enable, formula_enable
-            )
-
-            # Generate markdown
-            pdf_info = middle_json["pdf_info"]
-            md_content = pipeline_union_make(pdf_info, MakeMode.MM_MD, "images")
-
-            processing_time_ms = round((time.time() - start_time) * 1000)
-            metadata = {
-                "pages": page_count,
-                "ocr": _ocr_enable,
-                "processing_time_ms": processing_time_ms,
-            }
-            return md_content, metadata
-
+        return _do_convert(pdf_bytes, lang, parse_method, formula_enable, table_enable, max_pages, start_time)
+    except PdfiumError as first_error:
+        # PDFium can't parse the PDF (e.g. broken xref table) — repair and retry
+        repaired = _repair_pdf(pdf_bytes)
+        if repaired is pdf_bytes:
+            raise Exception(f"Error converting PDF to markdown: {first_error}")
+        try:
+            return _do_convert(repaired, lang, parse_method, formula_enable, table_enable, max_pages, start_time)
+        except Exception:
+            raise Exception(f"Error converting PDF to markdown: {first_error}")
     except Exception as e:
-        raise Exception(f"Error converting PDF to markdown: {str(e)}")
+        raise Exception(f"Error converting PDF to markdown: {e}")
 
 async def async_convert_to_markdown(pdf_bytes, timeout_seconds=None, **kwargs):
     """Async wrapper with timeout support"""
