@@ -53,6 +53,117 @@ def _repair_pdf(pdf_bytes: bytes) -> bytes:
         # If repair itself fails, return original bytes and let the pipeline report the error
         return pdf_bytes
 
+def _create_warmup_pdf(num_pages=4):
+    """Create a synthetic multi-page PDF with dense text for CUDA kernel warm-up.
+
+    Generates pages with many text lines at varied font sizes so the layout model
+    detects numerous text regions, forcing OCR-det to process diverse tensor shapes
+    and pre-compile CUDA kernels for them.
+    """
+    page_obj_nums = []
+    page_content_pairs = []
+    obj_num = 4  # 1=Catalog, 2=Pages, 3=Font
+
+    for p in range(num_pages):
+        ops = ["BT"]
+        y = 760
+        for i in range(40):
+            size = 8 + (i % 5) * 2  # cycle 8, 10, 12, 14, 16 pt
+            x = 40 + (i % 3) * 10
+            text = f"P{p+1} L{i+1} The quick brown fox jumps over the lazy dog 0123456789"
+            ops.append(f"/F1 {size} Tf 1 0 0 1 {x} {y} Tm ({text}) Tj")
+            y -= size + 3
+            if y < 40:
+                break
+        ops.append("ET")
+        content_bytes = "\n".join(ops).encode("latin-1")
+
+        content_obj_num = obj_num
+        page_obj_num = obj_num + 1
+        page_content_pairs.append((content_obj_num, page_obj_num, content_bytes))
+        page_obj_nums.append(page_obj_num)
+        obj_num += 2
+
+    total_objs = obj_num
+    buf = io.BytesIO()
+    offsets = {}
+
+    def write(data):
+        if isinstance(data, str):
+            data = data.encode()
+        buf.write(data)
+
+    def start_obj(num):
+        offsets[num] = buf.tell()
+        write(f"{num} 0 obj\n")
+
+    def end_obj():
+        write(b"endobj\n")
+
+    write(b"%PDF-1.4\n")
+
+    start_obj(1)
+    write(b"<</Type/Catalog/Pages 2 0 R>>\n")
+    end_obj()
+
+    kids = " ".join(f"{n} 0 R" for n in page_obj_nums)
+    start_obj(2)
+    write(f"<</Type/Pages/Kids[{kids}]/Count {num_pages}>>\n")
+    end_obj()
+
+    start_obj(3)
+    write(b"<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>\n")
+    end_obj()
+
+    for content_obj_num, page_obj_num, content_bytes in page_content_pairs:
+        start_obj(content_obj_num)
+        write(f"<</Length {len(content_bytes)}>>\nstream\n")
+        buf.write(content_bytes)
+        write(b"\nendstream\n")
+        end_obj()
+
+        start_obj(page_obj_num)
+        write(f"<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]"
+              f"/Contents {content_obj_num} 0 R"
+              f"/Resources<</Font<</F1 3 0 R>>>>>>\n")
+        end_obj()
+
+    xref_offset = buf.tell()
+    write(f"xref\n0 {total_objs}\n")
+    write(b"0000000000 65535 f \r\n")
+    for i in range(1, total_objs):
+        write(f"{offsets[i]:010d} 00000 n \r\n")
+
+    write(f"trailer<</Size {total_objs}/Root 1 0 R>>\n"
+          f"startxref\n{xref_offset}\n%%EOF\n")
+
+    return buf.getvalue()
+
+
+def _warmup_with_inference():
+    """Run a full inference pass on a synthetic PDF to pre-compile CUDA kernels.
+
+    The first time GPU models encounter new tensor shapes, CUDA JIT-compiles
+    optimized kernels (~2s per shape). This warm-up forces compilation for
+    common shapes before real requests arrive, eliminating the cold-start
+    penalty (observed as ~70s vs ~0.7s for OCR-det in production).
+    """
+    print("Running warm-up inference to pre-compile CUDA kernels...")
+    start = time.time()
+    pdf_bytes = _create_warmup_pdf(num_pages=4)
+    try:
+        _do_convert(
+            pdf_bytes, lang="en", parse_method="ocr",
+            formula_enable=True, table_enable=True,
+            max_pages=None, start_time=time.time(),
+        )
+        elapsed = round(time.time() - start, 1)
+        print(f"Warm-up inference complete in {elapsed}s")
+    except Exception as e:
+        elapsed = round(time.time() - start, 1)
+        print(f"Warm-up inference finished in {elapsed}s (non-critical error: {e})")
+
+
 def _do_convert(pdf_bytes, lang, parse_method, formula_enable, table_enable, max_pages, start_time):
     """Core conversion logic — separated so convert_to_markdown can retry with repaired bytes."""
     # Optionally limit to first N pages
@@ -201,12 +312,22 @@ async def handler(event):
         return {"error": str(e), "status": "ERROR"}
 
 if __name__ == "__main__":
+    # Warm up models and pre-compile CUDA kernels (both debug and production)
+    print("Warming up pipeline models...")
+    ModelSingleton().get_model(
+        lang="en",
+        formula_enable=True,
+        table_enable=True
+    )
+    print("Pipeline models warmed up")
+    _warmup_with_inference()
+
     if os.environ.get("DEBUG_SERVER", "false").lower() == "true":
         import uvicorn
         from fastapi import FastAPI, Request
-        
+
         app = FastAPI()
-        
+
         @app.get("/health")
         async def health():
             return {"status": "ok"}
@@ -222,12 +343,4 @@ if __name__ == "__main__":
         uvicorn.run(app, host="0.0.0.0", port=8000)
     else:
         print("Starting RunPod serverless handler...")
-        print("Warming up pipeline models...")
-        ModelSingleton().get_model(
-            lang="en", 
-            formula_enable=True,
-            table_enable=True
-        )
-        print("Pipeline models warmed up")
-
-        runpod.serverless.start({"handler": handler}) 
+        runpod.serverless.start({"handler": handler})
