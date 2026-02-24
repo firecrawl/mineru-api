@@ -107,7 +107,9 @@ def _split_pdf_into_chunks(pdf_bytes: bytes, num_chunks: int) -> list:
             page_idx += 1
         buf = io.BytesIO()
         writer.write(buf)
-        chunks.append(buf.getvalue())
+        # Round-trip through pypdf to fix xref tables / dangling references
+        # that pypdfium2 can't handle in split PDFs.
+        chunks.append(_repair_pdf(buf.getvalue()))
 
     return chunks
 
