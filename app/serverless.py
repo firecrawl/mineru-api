@@ -2,6 +2,7 @@ import base64
 import os
 import time
 import asyncio
+import concurrent.futures
 import tempfile
 import copy
 import io
@@ -23,6 +24,11 @@ from pypdf import PdfReader, PdfWriter
 from pypdfium2._helpers.misc import PdfiumError
 
 from app.warmup import create_warmup_pdf, warmup_ocr_det_shapes
+
+# Single-thread executor for all GPU work. cuDNN algorithm caches are per-thread
+# (per cuDNN handle), so warmup and real inference MUST run in the same thread
+# for compiled kernels to be reused.
+_gpu_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="gpu")
 
 class TimeoutError(Exception):
     pass
@@ -150,19 +156,26 @@ def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enabl
         raise Exception(f"Error converting PDF to markdown: {e}")
 
 async def async_convert_to_markdown(pdf_bytes, timeout_seconds=None, **kwargs):
-    """Async wrapper with timeout support"""
+    """Async wrapper with timeout support.
+
+    Uses _gpu_executor (a single-thread pool) so that all GPU inference runs in
+    the same OS thread.  cuDNN caches its algorithm selections per-handle
+    (per-thread), so keeping warmup and real inference on the same thread lets
+    previously compiled kernels be reused — eliminating the ~2 s cold-start
+    penalty per unique tensor shape.
+    """
     loop = asyncio.get_running_loop()
-    
+
     if timeout_seconds and timeout_seconds > 0:
         try:
             return await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, **kwargs)),
+                loop.run_in_executor(_gpu_executor, lambda: convert_to_markdown(pdf_bytes, **kwargs)),
                 timeout=timeout_seconds
             )
         except asyncio.TimeoutError:
             raise TimeoutError(f"PDF processing timed out after {timeout_seconds} seconds")
     else:
-        return await loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, **kwargs))
+        return await loop.run_in_executor(_gpu_executor, lambda: convert_to_markdown(pdf_bytes, **kwargs))
 
 
 async def handler(event):
@@ -229,8 +242,10 @@ async def handler(event):
     except Exception as e:
         return {"error": str(e), "status": "ERROR"}
 
-if __name__ == "__main__":
-    # Warm up models and pre-compile CUDA kernels (both debug and production)
+def _full_warmup():
+    """Run all warmup steps.  Executed inside _gpu_executor so that cuDNN
+    algorithm caches live in the same thread that will later handle real
+    inference requests."""
     print("Warming up pipeline models...")
     ModelSingleton().get_model(
         lang="en",
@@ -240,6 +255,13 @@ if __name__ == "__main__":
     print("Pipeline models warmed up")
     _warmup_with_inference()
     warmup_ocr_det_shapes(lang="en")
+    print("All warmup complete")
+
+
+if __name__ == "__main__":
+    # Run warmup inside _gpu_executor so cuDNN caches (per-thread) are
+    # populated in the SAME thread that will later run real inference.
+    _gpu_executor.submit(_full_warmup).result()
 
     if os.environ.get("DEBUG_SERVER", "false").lower() == "true":
         import uvicorn
