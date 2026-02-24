@@ -28,12 +28,12 @@ def warmup_ocr_det_shapes(lang="en"):
     longest side ≤ 960 and rounds both dimensions to multiples of 32.  The
     final CUDA tensor shape depends on BOTH the crop size and this transform.
 
-    This function simulates that transform for all plausible crop sizes from
-    a letter-size page at ~144 DPI (1224×1584 px), collects the unique CUDA
-    shapes (~255), and runs a dummy forward pass for each.
+    This function simulates that transform for all plausible crop sizes
+    (MinerU renders at 200 DPI), collects the unique CUDA shapes (~255), and
+    runs a dummy forward pass for each to populate cuDNN / CUDA caches.
 
-    With cudnn.benchmark=False the per-shape overhead is ~0.05 s (total ~15 s).
-    With cudnn.benchmark=True it would be ~2 s each (total ~8 min).
+    IMPORTANT: This must run in the SAME thread that will later handle real
+    inference (cuDNN caches are per-thread).  See _gpu_executor in serverless.py.
     """
     import numpy as np
     from mineru.backend.pipeline.model_init import AtomModelSingleton
@@ -80,6 +80,25 @@ def warmup_ocr_det_shapes(lang="en"):
 
     elapsed = round(time.time() - start, 1)
     print(f"OCR-det warmup complete: {total} shapes in {elapsed}s")
+
+    # Diagnostic: check if batch dimension (N>1) triggers recompilation.
+    # If N=4 takes ~2s here, batch size IS part of the cache key and we
+    # need to force N=1 in the pipeline to match warmup.
+    test_h, test_w = shapes[len(shapes) // 2]  # pick a middle shape
+    dummy = np.ones((test_h, test_w, 3), dtype=np.uint8) * 255
+    t = time.time()
+    try:
+        text_detector.batch_predict([dummy], 1)
+    except Exception:
+        pass
+    t_n1 = round(time.time() - t, 3)
+    t = time.time()
+    try:
+        text_detector.batch_predict([dummy] * 4, 4)
+    except Exception:
+        pass
+    t_n4 = round(time.time() - t, 3)
+    print(f"Batch size diagnostic: shape ({test_h},{test_w}) N=1 (cached): {t_n1}s, N=4: {t_n4}s")
 
 
 def _make_page_ops(page_idx):
