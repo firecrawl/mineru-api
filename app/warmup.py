@@ -21,17 +21,19 @@ import time
 
 
 def warmup_ocr_det_shapes(lang="en"):
-    """Pre-compile CUDA kernels for OCR-det across all common input resolutions.
+    """Pre-compile CUDA kernels for OCR-det across all realistic input resolutions.
 
-    The synthetic PDF warm-up produces OCR-det resolution groups that don't
-    overlap with real documents (observed: 28 warm-up shapes vs 37 production
-    shapes with zero overlap).  This function bypasses the PDF pipeline and
-    feeds dummy images directly into the OCR-det model at every 64-px-padded
-    resolution in the typical text-region range.
+    MinerU's batch_analyze pads text-region crops to 64-px boundaries, then
+    the TextDetector preprocessor (DetResizeForTest) scales images so the
+    longest side ≤ 960 and rounds both dimensions to multiples of 32.  The
+    final CUDA tensor shape depends on BOTH the crop size and this transform.
 
-    Grid: heights 64-512 (8 values) x widths 64-1280 (20 values) = 160 shapes.
-    Shapes already compiled by the PDF warm-up run in ~0.02 s each (cached).
-    New shapes compile at ~2 s each.  Typical additional time: 2-4 minutes.
+    This function simulates that transform for all plausible crop sizes from
+    a letter-size page at ~144 DPI (1224×1584 px), collects the unique CUDA
+    shapes (~255), and runs a dummy forward pass for each.
+
+    With cudnn.benchmark=False the per-shape overhead is ~0.05 s (total ~15 s).
+    With cudnn.benchmark=True it would be ~2 s each (total ~8 min).
     """
     import numpy as np
     from mineru.backend.pipeline.model_init import AtomModelSingleton
@@ -45,17 +47,25 @@ def warmup_ocr_det_shapes(lang="en"):
     )
     text_detector = ocr_model.text_detector
 
-    # Build grid: every 64-px multiple in the common text-region range.
-    # Heights 64-512 cover single lines through large paragraphs.
-    # Widths 64-1280 cover narrow labels through full page-width blocks.
-    shapes = [
-        (h, w)
-        for h in range(64, 513, 64)
-        for w in range(64, 1281, 64)
-    ]
+    # Simulate DetResizeForTest (limit_side_len=960, limit_type='max',
+    # round to multiple of 32) on all plausible crop sizes.
+    # Crops come from batch_analyze: padded to 64-px boundaries.
+    # Page at ~144 DPI: ~1224×1584 px → crop heights up to ~1664, widths up to ~1344.
+    cuda_shapes = set()
+    for h in range(64, 1665, 64):
+        for w in range(64, 1345, 64):
+            max_side = max(h, w)
+            if max_side > 960:
+                ratio = 960.0 / max_side
+            else:
+                ratio = 1.0
+            rh = max(int(round(int(h * ratio) / 32) * 32), 32)
+            rw = max(int(round(int(w * ratio) / 32) * 32), 32)
+            cuda_shapes.add((rh, rw))
 
+    shapes = sorted(cuda_shapes)
     total = len(shapes)
-    print(f"Pre-compiling OCR-det CUDA kernels for {total} resolution shapes...")
+    print(f"Pre-compiling OCR-det for {total} CUDA shapes...")
     start = time.time()
 
     for i, (h, w) in enumerate(shapes):
@@ -64,12 +74,12 @@ def warmup_ocr_det_shapes(lang="en"):
             text_detector.batch_predict([dummy], 1)
         except Exception:
             pass
-        if (i + 1) % 40 == 0:
+        if (i + 1) % 50 == 0:
             elapsed = round(time.time() - start, 1)
             print(f"  OCR-det warmup: {i + 1}/{total} shapes ({elapsed}s)")
 
     elapsed = round(time.time() - start, 1)
-    print(f"OCR-det kernel pre-compilation complete: {total} shapes in {elapsed}s")
+    print(f"OCR-det warmup complete: {total} shapes in {elapsed}s")
 
 
 def _make_page_ops(page_idx):

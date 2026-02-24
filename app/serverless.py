@@ -6,6 +6,9 @@ import tempfile
 import copy
 import io
 
+import torch
+torch.backends.cudnn.benchmark = False
+
 import runpod
 
 # New mineru imports
