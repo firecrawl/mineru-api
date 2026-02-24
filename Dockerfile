@@ -39,6 +39,8 @@ ENV PATH="$APP_HOME/.venv/bin:$PATH"
 # GPU/runtime performance tuning (VRAM auto-detected from GPU at runtime)
 ENV MINERU_PDF_RENDER_THREADS=8
 ENV OMP_NUM_THREADS=8
+ENV NUM_GPU_WORKERS=3
+ENV MIN_CHUNK_PAGES=3
 
 #use paddlegpu
 # RUN pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
