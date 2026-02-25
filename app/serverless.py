@@ -107,9 +107,7 @@ def _split_pdf_into_chunks(pdf_bytes: bytes, num_chunks: int) -> list:
             page_idx += 1
         buf = io.BytesIO()
         writer.write(buf)
-        # Round-trip through pypdf to fix xref tables / dangling references
-        # that pypdfium2 can't handle in split PDFs.
-        chunks.append(_repair_pdf(buf.getvalue()))
+        chunks.append(buf.getvalue())
 
     return chunks
 
@@ -315,9 +313,13 @@ async def async_convert_to_markdown(pdf_bytes, timeout_seconds=None, **kwargs):
 
         print(f"Processing {total_pages} pages in {len(chunks)} chunks")
 
-        # Submit all chunks to the thread pool concurrently
+        # Submit chunks with a stagger to avoid concurrent pypdfium2
+        # document loading (not thread-safe).  Once past the loading
+        # phase, inference runs in parallel via GIL-releasing CUDA ops.
         futures = []
         for i, chunk in enumerate(chunks):
+            if i > 0:
+                await asyncio.sleep(1.0)
             fut = loop.run_in_executor(
                 _gpu_executor,
                 lambda idx=i, c=chunk: _convert_chunk_with_retry(
