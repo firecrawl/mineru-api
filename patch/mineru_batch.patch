@@ -1,5 +1,5 @@
---- original.py	2025-12-03 21:01:21.371655371 +0200
-+++ patched.py	2025-12-04 00:58:44.104708433 +0200
+--- /tmp/original_276.py	2026-02-13 12:04:52
++++ /tmp/patched_276.py	2026-02-13 12:05:10
 @@ -15,6 +15,8 @@
  os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'  # 让mps可以fallback
  os.environ['NO_ALBUMENTATIONS_UPDATE'] = '1'  # 禁止albumentations检查更新
@@ -9,38 +9,49 @@
  class ModelSingleton:
      _instance = None
      _models = {}
-@@ -173,7 +175,9 @@
+@@ -176,7 +178,11 @@
              ) from e
  
      gpu_memory = get_vram(device)
 -    if gpu_memory >= 16:
-+    if gpu_memory >= 22: 
++    if gpu_memory >= 40:
++        batch_ratio = 48
++    elif gpu_memory >= 22:
 +        batch_ratio = 32
 +    elif gpu_memory >= 16:
          batch_ratio = 16
      elif gpu_memory >= 12:
          batch_ratio = 8
-@@ -188,14 +192,15 @@
-             f'You can set MINERU_VIRTUAL_VRAM_SIZE environment variable to adjust GPU memory allocation.'
+@@ -190,18 +194,20 @@
+             f'GPU Memory: {gpu_memory} GB, Batch Ratio: {batch_ratio}. '
      )
  
 -    # 检测torch的版本号
 -    import torch
 -    from packaging import version
--    if version.parse(torch.__version__) >= version.parse("2.8.0") or str(device).startswith('mps'):
+-    device_type = os.getenv("MINERU_LMDEPLOY_DEVICE", "")
+-    if (
+-            version.parse(torch.__version__) >= version.parse("2.8.0")
+-            or str(device).startswith('mps')
+-            or device_type.lower() in ["corex"]
+-    ):
 -        enable_ocr_det_batch = False
 -    else:
 -        enable_ocr_det_batch = True
--
 +    # # 检测torch的版本号
 +    # import torch
 +    # from packaging import version
-+    # if version.parse(torch.__version__) >= version.parse("2.8.0") or str(device).startswith('mps'):
++    # device_type = os.getenv("MINERU_LMDEPLOY_DEVICE", "")
++    # if (
++    #         version.parse(torch.__version__) >= version.parse("2.8.0")
++    #         or str(device).startswith('mps')
++    #         or device_type.lower() in ["corex"]
++    # ):
 +    #     enable_ocr_det_batch = False
 +    # else:
 +    #     enable_ocr_det_batch = True
 +    enable_ocr_det_batch = DET_BATCH_ENABLE
 +    print(f"enable_ocr_det_batch: {enable_ocr_det_batch}")
+ 
      batch_model = BatchAnalyze(model_manager, batch_ratio, formula_enable, table_enable, enable_ocr_det_batch)
      results = batch_model(images_with_extra_info)
- 
