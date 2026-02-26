@@ -13,9 +13,9 @@ ENV PATH="/opt/depot_tools:$PATH"
 
 WORKDIR /build
 
-# Fetch PDFium source
+# Fetch PDFium source — pinned to chromium/6462 to match pypdfium2 4.30.0
 RUN gclient config --unmanaged https://pdfium.googlesource.com/pdfium.git && \
-    gclient sync --no-history
+    gclient sync --no-history --revision=origin/chromium/6462
 
 # Apply patch
 COPY pdfium-null-kids.patch /tmp/pdfium-null-kids.patch

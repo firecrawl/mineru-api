@@ -1,5 +1,5 @@
 diff --git a/core/fpdfapi/parser/cpdf_document.cpp b/core/fpdfapi/parser/cpdf_document.cpp
-index 3398b469c..7d2794e4c 100644
+index 3398b469c..patch 100644
 --- a/core/fpdfapi/parser/cpdf_document.cpp
 +++ b/core/fpdfapi/parser/cpdf_document.cpp
 @@ -68,12 +68,9 @@ NodeType GetNodeType(RetainPtr<CPDF_Dictionary> kid_dict) {
@@ -18,11 +18,11 @@ index 3398b469c..7d2794e4c 100644
 
    RetainPtr<CPDF_Array> kids_array = pages_dict->GetMutableArrayFor("Kids");
    if (!kids_array) {
-@@ -285,7 +282,6 @@ RetainPtr<CPDF_Dictionary> CPDF_Document::TraversePDFPages(int iPage,
+@@ -275,7 +272,6 @@ RetainPtr<CPDF_Dictionary> CPDF_Document::TraversePDFPages(int iPage,
      pKidList->ConvertToIndirectObjectAt(i, this);
      RetainPtr<CPDF_Dictionary> pKid = pKidList->GetMutableDictAt(i);
      if (!pKid) {
 -      (*nPagesToGo)--;
-       tree_traversal_[level].second++;
+       m_pTreeTraversal[level].second++;
        continue;
      }
