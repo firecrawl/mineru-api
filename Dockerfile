@@ -32,6 +32,7 @@ RUN poetry config virtualenvs.in-project true && \
 #RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_analyze.py < /tmp/mineru_batch.patch
 
 # Replace bundled PDFium with patched version (fixes null /Kids page count)
+# https://issues.chromium.org/issues/487746367
 # Build with: cd patch && ./build-pdfium.sh
 COPY patch/libpdfium.so /tmp/libpdfium.so
 RUN cp /tmp/libpdfium.so .venv/lib/python3.*/site-packages/pypdfium2_raw/libpdfium.so

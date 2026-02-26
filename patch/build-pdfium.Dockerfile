@@ -17,7 +17,8 @@ WORKDIR /build
 RUN gclient config --unmanaged https://pdfium.googlesource.com/pdfium.git && \
     gclient sync --no-history --revision=origin/chromium/6462
 
-# Apply patch
+# Apply patch — fixes null /Kids page count
+# https://issues.chromium.org/issues/487746367
 COPY pdfium-null-kids.patch /tmp/pdfium-null-kids.patch
 RUN cd pdfium && patch -p1 < /tmp/pdfium-null-kids.patch
 
