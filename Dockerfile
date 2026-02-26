@@ -30,6 +30,13 @@ RUN poetry config virtualenvs.in-project true && \
 # Patch mineru to support batch?
 #COPY patch/mineru_batch.patch /tmp/mineru_batch.patch
 #RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_analyze.py < /tmp/mineru_batch.patch
+
+# Replace bundled PDFium with patched version (fixes null /Kids page count)
+# https://issues.chromium.org/issues/487746367
+# Build with: cd patch && ./build-pdfium.sh
+COPY patch/libpdfium.so /tmp/libpdfium.so
+RUN cp /tmp/libpdfium.so .venv/lib/python3.*/site-packages/pypdfium2_raw/libpdfium.so
+
 # Add the virtual environment's bin directory to PATH
 ENV PATH="$APP_HOME/.venv/bin:$PATH"
 

@@ -3,7 +3,6 @@ import os
 import time
 import asyncio
 import tempfile
-import copy
 import io
 
 import runpod
@@ -40,7 +39,6 @@ def _trim_pdf_to_max_pages(pdf_bytes: bytes, max_pages: int) -> bytes:
 
 def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enable=True, table_enable=True, max_pages=None):
     """Convert PDF bytes to markdown - returns only the markdown string"""
-    
     try:
         # Optionally limit to first N pages
         if max_pages is not None:
@@ -52,36 +50,35 @@ def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enabl
 
         # Analyze the PDF
         infer_results, all_image_lists, all_pdf_docs, lang_list_result, ocr_enabled_list = pipeline_doc_analyze(
-            [pdf_bytes], 
-            [lang], 
-            parse_method=parse_method, 
+            [pdf_bytes],
+            [lang],
+            parse_method=parse_method,
             formula_enable=formula_enable,
             table_enable=table_enable
         )
-        
+
         # Process results
         model_list = infer_results[0]
         images_list = all_image_lists[0]
         pdf_doc = all_pdf_docs[0]
         _lang = lang_list_result[0]
         _ocr_enable = ocr_enabled_list[0]
-        
+
         # Create temporary image directory for any image processing
         with tempfile.TemporaryDirectory() as temp_dir:
             image_writer = FileBasedDataWriter(temp_dir)
-            
+
             # Convert to middle JSON format
             middle_json = pipeline_result_to_middle_json(
-                model_list, images_list, pdf_doc, image_writer, 
+                model_list, images_list, pdf_doc, image_writer,
                 _lang, _ocr_enable, formula_enable
             )
-            
+
             # Generate and return markdown
             pdf_info = middle_json["pdf_info"]
             return pipeline_union_make(pdf_info, MakeMode.MM_MD, "images")
-            
     except Exception as e:
-        raise Exception(f"Error converting PDF to markdown: {str(e)}")
+        raise Exception(f"Error converting PDF to markdown: {e}")
 
 async def async_convert_to_markdown(pdf_bytes, timeout_seconds=None, **kwargs):
     """Async wrapper with timeout support"""
