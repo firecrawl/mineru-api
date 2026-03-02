@@ -33,6 +33,10 @@ RUN poetry config virtualenvs.in-project true && \
 # Add the virtual environment's bin directory to PATH
 ENV PATH="$APP_HOME/.venv/bin:$PATH"
 
+# GPU/runtime performance tuning
+ENV NUM_GPU_WORKERS=3
+ENV MIN_CHUNK_PAGES=3
+
 #use paddlegpu
 # RUN pip install paddlepaddle-gpu==3.0.0b1 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
 
