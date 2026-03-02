@@ -1,10 +1,11 @@
 name: Deploy Image to GHCR
 
-env:
-  DOTNET_VERSION: "6.0.x"
-
 on:
   push:
+    branches:
+      - main
+      - dev
+  pull_request:
     branches:
       - main
       - dev
@@ -27,9 +28,18 @@ jobs:
           username: ${{github.actor}}
           password: ${{secrets.GITHUB_TOKEN}}
 
+      - name: "Determine image tag"
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "tag=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: "Build API Image"
         run: |
-          docker build . --tag ghcr.io/firecrawl/mineru-api:latest
-          docker image ls ghcr.io/firecrawl/mineru-api:latest
-          docker history ghcr.io/firecrawl/mineru-api:latest
-          docker push ghcr.io/firecrawl/mineru-api:latest
+          docker build . --tag ghcr.io/firecrawl/mineru-api:${{ steps.tag.outputs.tag }}
+          docker image ls ghcr.io/firecrawl/mineru-api:${{ steps.tag.outputs.tag }}
+          docker history ghcr.io/firecrawl/mineru-api:${{ steps.tag.outputs.tag }}
+          docker push ghcr.io/firecrawl/mineru-api:${{ steps.tag.outputs.tag }}
