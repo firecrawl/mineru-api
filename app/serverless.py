@@ -21,6 +21,21 @@ from pypdf import PdfReader, PdfWriter
 class TimeoutError(Exception):
     pass
 
+def _extract_specific_pages(pdf_bytes: bytes, pages: list) -> bytes:
+    """Return a new PDF containing only the specified 1-indexed page numbers."""
+    input_buffer = io.BytesIO(pdf_bytes)
+    reader = PdfReader(input_buffer)
+
+    writer = PdfWriter()
+    for page_num in pages:
+        idx = page_num - 1  # convert to 0-indexed
+        if 0 <= idx < len(reader.pages):
+            writer.add_page(reader.pages[idx])
+
+    output_buffer = io.BytesIO()
+    writer.write(output_buffer)
+    return output_buffer.getvalue()
+
 def _trim_pdf_to_max_pages(pdf_bytes: bytes, max_pages: int) -> bytes:
     """Return a new PDF bytes object with at most the first max_pages pages."""
     if max_pages is None or max_pages <= 0:
@@ -38,10 +53,14 @@ def _trim_pdf_to_max_pages(pdf_bytes: bytes, max_pages: int) -> bytes:
     writer.write(output_buffer)
     return output_buffer.getvalue()
 
-def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enable=True, table_enable=True, max_pages=None):
+def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enable=True, table_enable=True, max_pages=None, pages=None):
     """Convert PDF bytes to markdown - returns only the markdown string"""
-    
+
     try:
+        # Extract specific pages if requested
+        if pages is not None:
+            pdf_bytes = _extract_specific_pages(pdf_bytes, pages)
+
         # Optionally limit to first N pages
         if max_pages is not None:
             try:
@@ -108,9 +127,13 @@ async def handler(event):
         created_at = input_data.get("created_at")
         max_pages = input_data.get("max_pages")
         
+        pages = input_data.get("pages")
+
         # Processing options
         lang = input_data.get("lang", "en")
-        parse_method = input_data.get("parse_method", "auto")
+        # Default to "ocr" when specific pages are requested (caller already
+        # determined these pages need OCR, skip MinerU's classify heuristic)
+        parse_method = input_data.get("parse_method", "ocr" if pages else "auto")
         formula_enable = input_data.get("formula_enable", True)
         table_enable = input_data.get("table_enable", True)
 
@@ -142,6 +165,17 @@ async def handler(event):
             except Exception:
                 return {"error": "Invalid max_pages; must be an integer", "status": "ERROR"}
 
+        # Validate pages if provided
+        if pages is not None:
+            if not isinstance(pages, list):
+                return {"error": "pages must be a list of positive integers", "status": "ERROR"}
+            try:
+                pages = [int(p) for p in pages]
+                if not all(p > 0 for p in pages):
+                    return {"error": "pages must contain only positive integers", "status": "ERROR"}
+            except Exception:
+                return {"error": "Invalid pages; must be a list of integers", "status": "ERROR"}
+
         # Process PDF
         pdf_bytes = base64.b64decode(base64_content)
         
@@ -152,7 +186,8 @@ async def handler(event):
             parse_method=parse_method,
             formula_enable=formula_enable,
             table_enable=table_enable,
-            max_pages=max_pages
+            max_pages=max_pages,
+            pages=pages
         )
 
         return {"markdown": md_content, "status": "SUCCESS"}
