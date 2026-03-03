@@ -236,7 +236,7 @@ def _gpu_diagnostics():
     if torch.cuda.is_available():
         info["cuda_device_name"] = torch.cuda.get_device_name(0)
         info["cuda_version"] = torch.version.cuda
-        mem = torch.cuda.get_device_properties(0).total_mem
+        mem = torch.cuda.get_device_properties(0).total_memory
         info["vram_gb"] = round(mem / (1024**3), 1)
     from mineru.utils.config_reader import get_device
     info["mineru_device"] = get_device()
