@@ -223,7 +223,33 @@ def _full_warmup():
     print(f"[{thread}] Warmup complete")
 
 
+def _gpu_diagnostics():
+    """Print GPU/CUDA diagnostics at startup."""
+    import torch
+    info = {
+        "torch_version": torch.__version__,
+        "cuda_available": torch.cuda.is_available(),
+        "cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
+        "cudnn_available": torch.backends.cudnn.is_available(),
+        "cudnn_version": torch.backends.cudnn.version() if torch.backends.cudnn.is_available() else None,
+    }
+    if torch.cuda.is_available():
+        info["cuda_device_name"] = torch.cuda.get_device_name(0)
+        info["cuda_version"] = torch.version.cuda
+        mem = torch.cuda.get_device_properties(0).total_mem
+        info["vram_gb"] = round(mem / (1024**3), 1)
+    from mineru.utils.config_reader import get_device
+    info["mineru_device"] = get_device()
+    for k, v in info.items():
+        print(f"  {k}: {v}")
+    return info
+
+
 if __name__ == "__main__":
+    print("=== GPU Diagnostics ===")
+    _diag = _gpu_diagnostics()
+    print("=======================")
+
     # Run all warmup on the GPU thread so cuDNN caches are reused at inference time
     _gpu_executor.submit(_full_warmup).result()
 
@@ -232,6 +258,10 @@ if __name__ == "__main__":
         from fastapi import FastAPI, Request
 
         app = FastAPI()
+
+        @app.get("/debug")
+        async def debug_info():
+            return _diag
 
         @app.post("/run")
         async def debug_endpoint(request: Request):
