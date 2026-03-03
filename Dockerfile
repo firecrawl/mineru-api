@@ -53,6 +53,11 @@ COPY . ./
 
 RUN /bin/bash -c "mineru-models-download -s huggingface -m pipeline"
 
+# Healthcheck: RunPod serverless starts on port 8000 after warmup completes.
+# start-period covers model loading + CUDA kernel warmup (~10 min).
+HEALTHCHECK --interval=10s --timeout=5s --start-period=600s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
 # Set the entry point to activate the virtual environment and run the command line tool
 ENTRYPOINT ["/bin/bash", "-c", "export MINERU_MODEL_SOURCE=local && python3 -m app.serverless"]
 # CMD ["python3", "-m", "app.serverless"]
