@@ -33,6 +33,12 @@ RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_ana
 # Cap OCR-det forward batch size to N=1 so CUDA kernels match warmup cache
 COPY patch/batch_analyze_det_bs.patch /tmp/batch_analyze_det_bs.patch
 RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/batch_analyze.py < /tmp/batch_analyze_det_bs.patch
+# Increase Layout/MFD batch sizes from 1 to 8 for better GPU utilization
+COPY patch/batch_sizes.patch /tmp/batch_sizes.patch
+RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/batch_analyze.py < /tmp/batch_sizes.patch
+# Enable CUDA for wired table UNet model (was CPU-only)
+COPY patch/wired_table_cuda.patch /tmp/wired_table_cuda.patch
+RUN patch .venv/lib/python3.*/site-packages/mineru/model/table/rec/unet_table/utils.py < /tmp/wired_table_cuda.patch
 # Add the virtual environment's bin directory to PATH
 ENV PATH="$APP_HOME/.venv/bin:$PATH"
 

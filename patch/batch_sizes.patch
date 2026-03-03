@@ -1,0 +1,13 @@
+--- a/batch_analyze.py
++++ b/batch_analyze.py
+@@ -14,8 +14,8 @@
+ from ...utils.ocr_utils import get_adjusted_mfdetrec_res, get_ocr_result_list, OcrConfidence, get_rotate_crop_image
+ from ...utils.pdf_image_tools import get_crop_np_img
+
+-YOLO_LAYOUT_BASE_BATCH_SIZE = 1
+-MFD_BASE_BATCH_SIZE = 1
++YOLO_LAYOUT_BASE_BATCH_SIZE = 8
++MFD_BASE_BATCH_SIZE = 8
+ MFR_BASE_BATCH_SIZE = 16
+ OCR_DET_BASE_BATCH_SIZE = 16
+ TABLE_ORI_CLS_BATCH_SIZE = 16
