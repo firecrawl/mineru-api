@@ -2,9 +2,14 @@ import base64
 import os
 import time
 import asyncio
+import concurrent.futures
 import tempfile
 import copy
 import io
+import threading
+
+import torch
+torch.backends.cudnn.benchmark = False
 
 import runpod
 
@@ -17,6 +22,15 @@ from mineru.backend.pipeline.model_json_to_middle_json import result_to_middle_j
 from mineru.backend.pipeline.pipeline_analyze import ModelSingleton
 
 from pypdf import PdfReader, PdfWriter
+
+from app.warmup import create_warmup_pdf, warmup_ocr_det_shapes
+
+# Thread pool for GPU work.  cuDNN algorithm caches are per-thread
+# (per cuDNN handle), so warmup and real inference MUST run in the same
+# thread for compiled kernels to be reused.
+_gpu_executor = concurrent.futures.ThreadPoolExecutor(
+    max_workers=1, thread_name_prefix="gpu"
+)
 
 class TimeoutError(Exception):
     pass
@@ -84,19 +98,23 @@ def convert_to_markdown(pdf_bytes, lang="en", parse_method="auto", formula_enabl
         raise Exception(f"Error converting PDF to markdown: {str(e)}")
 
 async def async_convert_to_markdown(pdf_bytes, timeout_seconds=None, **kwargs):
-    """Async wrapper with timeout support"""
+    """Async wrapper with timeout support.
+
+    Runs inference on _gpu_executor so it shares the same thread (and
+    cuDNN algorithm caches) that was warmed up at startup.
+    """
     loop = asyncio.get_running_loop()
-    
+
     if timeout_seconds and timeout_seconds > 0:
         try:
             return await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, **kwargs)),
+                loop.run_in_executor(_gpu_executor, lambda: convert_to_markdown(pdf_bytes, **kwargs)),
                 timeout=timeout_seconds
             )
         except asyncio.TimeoutError:
             raise TimeoutError(f"PDF processing timed out after {timeout_seconds} seconds")
     else:
-        return await loop.run_in_executor(None, lambda: convert_to_markdown(pdf_bytes, **kwargs))
+        return await loop.run_in_executor(_gpu_executor, lambda: convert_to_markdown(pdf_bytes, **kwargs))
 
 async def handler(event):
     """Main serverless handler - returns only markdown"""
@@ -162,30 +180,98 @@ async def handler(event):
     except Exception as e:
         return {"error": str(e), "status": "ERROR"}
 
+def _warmup_with_inference():
+    """Run a full inference pass on a synthetic PDF to pre-compile CUDA kernels.
+
+    The first time GPU models encounter new tensor shapes, CUDA JIT-compiles
+    optimized kernels (~2s per shape). This warm-up forces compilation for
+    common shapes before real requests arrive.
+    """
+    thread = threading.current_thread().name
+    print(f"[{thread}] Running warm-up inference to pre-compile CUDA kernels...")
+    start = time.time()
+    pdf_bytes = create_warmup_pdf(num_pages=8)
+    try:
+        convert_to_markdown(
+            pdf_bytes, lang="en", parse_method="ocr",
+            formula_enable=True, table_enable=True,
+            max_pages=None,
+        )
+        elapsed = round(time.time() - start, 1)
+        print(f"[{thread}] Warm-up inference complete in {elapsed}s")
+    except Exception as e:
+        elapsed = round(time.time() - start, 1)
+        print(f"[{thread}] Warm-up inference finished in {elapsed}s (non-critical error: {e})")
+
+
+def _full_warmup():
+    """Load models + run inference + warm OCR-det shapes on the GPU thread.
+
+    Executed inside _gpu_executor so that cuDNN algorithm caches live in the
+    same thread that will later handle real inference requests.
+    """
+    thread = threading.current_thread().name
+    print(f"[{thread}] Warming up pipeline models...")
+    ModelSingleton().get_model(
+        lang="en",
+        formula_enable=True,
+        table_enable=True
+    )
+    print(f"[{thread}] Pipeline models warmed up")
+    _warmup_with_inference()
+    warmup_ocr_det_shapes(lang="en")
+    print(f"[{thread}] Warmup complete")
+
+
+def _gpu_diagnostics():
+    """Print GPU/CUDA diagnostics at startup."""
+    import torch
+    info = {
+        "torch_version": torch.__version__,
+        "cuda_available": torch.cuda.is_available(),
+        "cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
+        "cudnn_available": torch.backends.cudnn.is_available(),
+        "cudnn_version": torch.backends.cudnn.version() if torch.backends.cudnn.is_available() else None,
+    }
+    if torch.cuda.is_available():
+        info["cuda_device_name"] = torch.cuda.get_device_name(0)
+        info["cuda_version"] = torch.version.cuda
+        mem = torch.cuda.get_device_properties(0).total_memory
+        info["vram_gb"] = round(mem / (1024**3), 1)
+    from mineru.utils.config_reader import get_device
+    info["mineru_device"] = get_device()
+    for k, v in info.items():
+        print(f"  {k}: {v}")
+    return info
+
+
 if __name__ == "__main__":
+    print("=== GPU Diagnostics ===")
+    _diag = _gpu_diagnostics()
+    print("=======================")
+
+    # Run all warmup on the GPU thread so cuDNN caches are reused at inference time
+    _gpu_executor.submit(_full_warmup).result()
+
     if os.environ.get("DEBUG_SERVER", "false").lower() == "true":
         import uvicorn
         from fastapi import FastAPI, Request
-        
+
         app = FastAPI()
-        
+
+        @app.get("/debug")
+        async def debug_info():
+            return _diag
+
         @app.post("/run")
         async def debug_endpoint(request: Request):
             input_data = await request.json()
             # Simulate RunPod event structure
             event = {"input": input_data}
             return await handler(event)
-            
+
         print("Starting Debug Server on port 8000...")
         uvicorn.run(app, host="0.0.0.0", port=8000)
     else:
         print("Starting RunPod serverless handler...")
-        print("Warming up pipeline models...")
-        ModelSingleton().get_model(
-            lang="en", 
-            formula_enable=True,
-            table_enable=True
-        )
-        print("Pipeline models warmed up")
-
-        runpod.serverless.start({"handler": handler}) 
+        runpod.serverless.start({"handler": handler})

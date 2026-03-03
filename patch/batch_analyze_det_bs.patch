@@ -1,0 +1,30 @@
+--- /tmp/original_ba.py	2026-02-23 22:17:10
++++ /tmp/patched_ba.py	2026-02-23 22:17:34
+@@ -1,4 +1,5 @@
+ import html
++import os
+
+ import cv2
+ from loguru import logger
+@@ -14,6 +15,12 @@
+ from ...utils.ocr_utils import get_adjusted_mfdetrec_res, get_ocr_result_list, OcrConfidence, get_rotate_crop_image
+ from ...utils.pdf_image_tools import get_crop_np_img
+
++# Cap the max tensor batch size (N dimension) for OCR-det forward passes.
++# cuDNN/CUDA caches compiled kernels per (N, C, H, W).  Setting this to 1
++# ensures every forward pass uses N=1, matching the warmup kernel cache.
++# Set to 0 to disable the cap (original behaviour).
++OCR_DET_MAX_FORWARD_BATCH = int(os.environ.get("OCR_DET_MAX_FORWARD_BATCH", "1"))
++
+ YOLO_LAYOUT_BASE_BATCH_SIZE = 1
+ MFD_BASE_BATCH_SIZE = 1
+ MFR_BASE_BATCH_SIZE = 16
+@@ -307,6 +314,8 @@
+
+                     # 批处理检测
+                     det_batch_size = min(len(batch_images), self.batch_ratio * OCR_DET_BASE_BATCH_SIZE)
++                    if OCR_DET_MAX_FORWARD_BATCH > 0:
++                        det_batch_size = min(det_batch_size, OCR_DET_MAX_FORWARD_BATCH)
+                     batch_results = ocr_model.text_detector.batch_predict(batch_images, det_batch_size)
+
+                     # 处理批处理结果

@@ -1,0 +1,25 @@
+--- /tmp/utils_original.py	2026-03-02 22:42:36
++++ /tmp/utils_patched.py	2026-03-02 22:43:02
+@@ -23,6 +23,7 @@
+
+ class EP(Enum):
+     CPU_EP = "CPUExecutionProvider"
++    CUDA_EP = "CUDAExecutionProvider"
+
+
+ class OrtInferSession:
+@@ -65,6 +66,16 @@
+         }
+         EP_list = [(EP.CPU_EP.value, cpu_provider_opts)]
+
++        # Use CUDA if available for GPU-accelerated inference
++        if EP.CUDA_EP.value in self.had_providers:
++            cuda_provider_opts = {
++                "device_id": 0,
++                "arena_extend_strategy": "kNextPowerOfTwo",
++                "cudnn_conv_algo_search": "EXHAUSTIVE",
++                "do_copy_in_default_stream": True,
++            }
++            EP_list.insert(0, (EP.CUDA_EP.value, cuda_provider_opts))
++
+         return EP_list

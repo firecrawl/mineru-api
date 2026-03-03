@@ -27,9 +27,18 @@ RUN poetry config virtualenvs.in-project true && \
     rm -rf /root/.cache/pypoetry && \
     rm -rf /root/.cache/pip
 
-# Patch mineru to support batch?
-#COPY patch/mineru_batch.patch /tmp/mineru_batch.patch
-#RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_analyze.py < /tmp/mineru_batch.patch
+# Patch mineru to support batch (batch_ratio=32 for 24GB VRAM, force OCR-det batching)
+COPY patch/mineru_batch.patch /tmp/mineru_batch.patch
+RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_analyze.py < /tmp/mineru_batch.patch
+# Cap OCR-det forward batch size to N=1 so CUDA kernels match warmup cache
+COPY patch/batch_analyze_det_bs.patch /tmp/batch_analyze_det_bs.patch
+RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/batch_analyze.py < /tmp/batch_analyze_det_bs.patch
+# Increase Layout/MFD batch sizes from 1 to 8 for better GPU utilization
+COPY patch/batch_sizes.patch /tmp/batch_sizes.patch
+RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/batch_analyze.py < /tmp/batch_sizes.patch
+# Enable CUDA for wired table UNet model (was CPU-only)
+COPY patch/wired_table_cuda.patch /tmp/wired_table_cuda.patch
+RUN patch .venv/lib/python3.*/site-packages/mineru/model/table/rec/unet_table/utils.py < /tmp/wired_table_cuda.patch
 # Add the virtual environment's bin directory to PATH
 ENV PATH="$APP_HOME/.venv/bin:$PATH"
 
@@ -43,6 +52,11 @@ ENV PATH="$APP_HOME/.venv/bin:$PATH"
 COPY . ./
 
 RUN /bin/bash -c "mineru-models-download -s huggingface -m pipeline"
+
+# Healthcheck: RunPod serverless starts on port 8000 after warmup completes.
+# start-period covers model loading + CUDA kernel warmup (~10 min).
+HEALTHCHECK --interval=10s --timeout=5s --start-period=600s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Set the entry point to activate the virtual environment and run the command line tool
 ENTRYPOINT ["/bin/bash", "-c", "export MINERU_MODEL_SOURCE=local && python3 -m app.serverless"]
