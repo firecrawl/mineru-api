@@ -30,6 +30,9 @@ RUN poetry config virtualenvs.in-project true && \
 # Patch mineru to support batch (batch_ratio=32 for 24GB VRAM, force OCR-det batching)
 COPY patch/mineru_batch.patch /tmp/mineru_batch.patch
 RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/pipeline_analyze.py < /tmp/mineru_batch.patch
+# Cap OCR-det forward batch size to N=1 so CUDA kernels match warmup cache
+COPY patch/batch_analyze_det_bs.patch /tmp/batch_analyze_det_bs.patch
+RUN patch .venv/lib/python3.*/site-packages/mineru/backend/pipeline/batch_analyze.py < /tmp/batch_analyze_det_bs.patch
 # Add the virtual environment's bin directory to PATH
 ENV PATH="$APP_HOME/.venv/bin:$PATH"
 
