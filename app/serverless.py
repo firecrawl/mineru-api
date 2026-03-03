@@ -162,30 +162,61 @@ async def handler(event):
     except Exception as e:
         return {"error": str(e), "status": "ERROR"}
 
+def _gpu_diagnostics():
+    """Print GPU/CUDA diagnostics at startup."""
+    import torch
+    info = {
+        "torch_version": torch.__version__,
+        "cuda_available": torch.cuda.is_available(),
+        "cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
+        "cudnn_available": torch.backends.cudnn.is_available(),
+        "cudnn_version": torch.backends.cudnn.version() if torch.backends.cudnn.is_available() else None,
+    }
+    if torch.cuda.is_available():
+        info["cuda_device_name"] = torch.cuda.get_device_name(0)
+        info["cuda_version"] = torch.version.cuda
+        mem = torch.cuda.get_device_properties(0).total_mem
+        info["vram_gb"] = round(mem / (1024**3), 1)
+    from mineru.utils.config_reader import get_device
+    info["mineru_device"] = get_device()
+    for k, v in info.items():
+        print(f"  {k}: {v}")
+    return info
+
+
 if __name__ == "__main__":
+    print("=== GPU Diagnostics ===")
+    _diag = _gpu_diagnostics()
+    print("=======================")
+
     if os.environ.get("DEBUG_SERVER", "false").lower() == "true":
         import uvicorn
         from fastapi import FastAPI, Request
-        
+
         app = FastAPI()
-        
+
+        @app.get("/debug")
+        async def debug_info():
+            return _diag
+
         @app.post("/run")
         async def debug_endpoint(request: Request):
             input_data = await request.json()
             # Simulate RunPod event structure
             event = {"input": input_data}
             return await handler(event)
-            
+
         print("Starting Debug Server on port 8000...")
         uvicorn.run(app, host="0.0.0.0", port=8000)
     else:
         print("Starting RunPod serverless handler...")
         print("Warming up pipeline models...")
         ModelSingleton().get_model(
-            lang="en", 
+            lang="en",
             formula_enable=True,
             table_enable=True
         )
         print("Pipeline models warmed up")
 
-        runpod.serverless.start({"handler": handler}) 
+        runpod.serverless.start({"handler": handler})
+ 
