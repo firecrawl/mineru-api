@@ -10,7 +10,8 @@ requires-python = ">=3.10,<3.14"
 dependencies = [
     "mineru[pipeline] (>=2.6.6,<3.0.0)",
     "runpod (>=1.7.12,<2.0.0)",
-    "pypdf (>=6.21.0,<7.0.0)"
+    "pypdf (>=6.21.0,<7.0.0)",
+    "certifi (>=2026.10.19)"
 ]
 
 

@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y tzdata
 # ENV TZ Asia/Tokyo
 
 RUN apt-get update && \
-    apt-get install --yes --no-install-recommends patch curl g++ libopencv-dev python3 python3-pip python3-dev && \
+    apt-get install --yes --no-install-recommends ca-certificates patch curl g++ libopencv-dev python3 python3-pip python3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 
